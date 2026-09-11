@@ -29,4 +29,25 @@ const protect = (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+const requireAdmin = async (req, res, next) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.userId).select('role isActive');
+
+    if (!user || user.isActive === false) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    req.userRole = user.role;
+    next();
+  } catch (error) {
+    console.error('Require admin error:', error);
+    return res.status(500).json({ message: 'Server error while checking admin access' });
+  }
+};
+
+module.exports = { protect, requireAdmin };

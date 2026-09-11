@@ -8,6 +8,8 @@ type ScreenHeaderProps = {
   variant: 'light' | 'dark';
   showBack?: boolean;
   onBack?: () => void;
+  /** Used when there is no history (e.g. Safepay redirect). */
+  fallbackHref?: string;
   rightAction?: ReactNode;
 };
 
@@ -16,11 +18,26 @@ export default function ScreenHeader({
   variant,
   showBack = true,
   onBack,
+  fallbackHref = '/home',
   rightAction,
 }: ScreenHeaderProps) {
   const router = useRouter();
   const isDark = variant === 'dark';
   const foregroundColor = isDark ? '#FFFFFF' : '#1a237e';
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace(fallbackHref as any);
+  };
 
   return (
     <View
@@ -32,7 +49,7 @@ export default function ScreenHeader({
       <View style={styles.titleGroup}>
         {showBack && (
           <TouchableOpacity
-            onPress={onBack ?? (() => router.back())}
+            onPress={handleBack}
             style={styles.backButton}
             accessibilityRole="button"
             accessibilityLabel="Go back"

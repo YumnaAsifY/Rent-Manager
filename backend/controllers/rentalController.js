@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Rental = require('../models/Rental');
 
 const formatDate = (value) => {
@@ -27,6 +28,16 @@ const getDisplayStatus = (leaseEndDate) => {
     ? 'Active'
     : 'Expired';
 };
+
+const getStartOfToday = () => {
+  const next = new Date();
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const expiredLeaseQuery = () => ({
+  $or: [{ leaseEndDate: null }, { leaseEndDate: { $lt: getStartOfToday() } }],
+});
 
 const serializeRental = (rental) => {
   const assetDoc =
@@ -95,7 +106,10 @@ const populateRentalQuery = (query) =>
 const getMyRentals = async (req, res) => {
   try {
     const rentals = await populateRentalQuery(
-      Rental.find({ tenant: req.userId }).sort({ createdAt: -1 })
+      Rental.find({
+        tenant: req.userId,
+        tenantDeleted: { $ne: true },
+      }).sort({ createdAt: -1 })
     );
 
     return res.status(200).json({
@@ -112,7 +126,10 @@ const getMyRentals = async (req, res) => {
 
 const getMyRentalsCount = async (req, res) => {
   try {
-    const count = await Rental.countDocuments({ tenant: req.userId });
+    const count = await Rental.countDocuments({
+      tenant: req.userId,
+      tenantDeleted: { $ne: true },
+    });
 
     return res.status(200).json({ count });
   } catch (error) {
@@ -140,6 +157,12 @@ const getRentalById = async (req, res) => {
       });
     }
 
+    if (rental.tenantDeleted) {
+      return res.status(404).json({
+        message: 'Rental not found',
+      });
+    }
+
     return res.status(200).json({
       rental: serializeRental(rental),
     });
@@ -152,10 +175,56 @@ const getRentalById = async (req, res) => {
   }
 };
 
+const hideExpiredRentals = async (req, res) => {
+  try {
+    const rawIds = Array.isArray(req.body?.ids) ? req.body.ids : [];
+    const ids = [
+      ...new Set(
+        rawIds.filter(
+          (id) => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)
+        )
+      ),
+    ];
+
+    if (ids.length === 0) {
+      return res.status(400).json({
+        message: 'Select at least one expired rental to remove',
+      });
+    }
+
+    const result = await Rental.updateMany(
+      {
+        _id: { $in: ids },
+        tenant: req.userId,
+        tenantDeleted: { $ne: true },
+        ...expiredLeaseQuery(),
+      },
+      { $set: { tenantDeleted: true } }
+    );
+
+    if (!result.modifiedCount) {
+      return res.status(400).json({
+        message: 'Only expired rentals can be removed from My Rentals',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Expired rentals removed from your list',
+    });
+  } catch (error) {
+    console.error('Hide expired rentals error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while removing rentals',
+    });
+  }
+};
+
 module.exports = {
   getMyRentals,
   getMyRentalsCount,
   getRentalById,
+  hideExpiredRentals,
   getDisplayStatus,
   serializeRental,
 };

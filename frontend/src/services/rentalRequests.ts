@@ -182,3 +182,28 @@ export async function rejectRentalRequest(
 
   return data.request;
 }
+
+export async function hideRentalRequest(
+  token: string,
+  requestId: string
+): Promise<void> {
+  await apiRequest<{ message: string }>(
+    `/api/rental-requests/${requestId}/hide`,
+    { method: 'PATCH' },
+    token
+  );
+}
+
+export async function hideRentalRequests(
+  token: string,
+  ids: string[]
+): Promise<void> {
+  await apiRequest<{ message: string }>(
+    '/api/rental-requests/hide-bulk',
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ ids }),
+    },
+    token
+  );
+}

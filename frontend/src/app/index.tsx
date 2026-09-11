@@ -21,7 +21,13 @@ export default function SplashScreen() {
 
   useEffect(() => {
     if (!isLoading && minimumDelayElapsed) {
-      router.replace(user ? '/home' : '/login');
+      router.replace(
+        user
+          ? user.role === 'admin'
+            ? '/admin'
+            : '/home'
+          : '/login'
+      );
     }
   }, [isLoading, minimumDelayElapsed, router, user]);
 

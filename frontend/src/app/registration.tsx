@@ -41,20 +41,12 @@ export default function RegistrationScreen() {
   };
 
   const isGmailAddress = (value: string) => {
-    const trimmedEmail = value.trim();
+    const normalizedEmail = value.trim().toLowerCase();
 
-    return (
-      trimmedEmail === trimmedEmail.toLowerCase() &&
-      /^[^\s@]+@gmail\.com$/.test(trimmedEmail)
-    );
+    return /^[^\s@]+@gmail\.com$/.test(normalizedEmail);
   };
 
   const handleEmailChange = (text: string) => {
-    if (/[A-Z]/.test(text)) {
-      setEmailValidationMessage('Email must contain lowercase letters only');
-      return;
-    }
-
     setEmail(text);
     setEmailValidationMessage(
       text.length > 0 && !isGmailAddress(text)
@@ -75,10 +67,10 @@ export default function RegistrationScreen() {
     }
 
     if (!isGmailAddress(email)) {
-      setEmailValidationMessage('Please enter a valid lowercase Gmail address');
+      setEmailValidationMessage('Please enter a valid Gmail address');
       Alert.alert(
         'Invalid Email',
-        'Please enter a valid lowercase Gmail address ending with @gmail.com'
+        'Please enter a valid Gmail address ending with @gmail.com'
       );
       return;
     }
@@ -109,12 +101,12 @@ try {
     body: JSON.stringify({
       name,
       phoneNumber,
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
       password,
     }),
   });
 
-  await login(email.trim(), password);
+  await login(email.trim().toLowerCase(), password);
   setPassword('');
   setConfirmPassword('');
   Alert.alert('Success', 'Registration successful!');

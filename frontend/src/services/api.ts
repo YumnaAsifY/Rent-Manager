@@ -1,24 +1,56 @@
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
+const extractLanIp = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const match = String(value).match(/(\d{1,3}(?:\.\d{1,3}){3})/);
+  const ip = match && match[1];
+
+  if (!ip || ip === '127.0.0.1' || ip.startsWith('0.')) {
+    return null;
+  }
+
+  return ip;
+};
+
 const resolveApiBaseUrl = () => {
-  // Laptop/web must talk to the local backend — never a stale LAN IP.
   if (Platform.OS === 'web') {
     return 'http://localhost:5000';
   }
 
-  // Expo Go: use the same host the phone already connected to via QR.
-  const hostUri = Constants.expoConfig?.hostUri ?? '';
-  const host = hostUri.split(':')[0];
+  const extra = Constants.expoConfig && Constants.expoConfig.extra;
+  const extraApiUrl =
+    extra && typeof extra.apiUrl === 'string' ? extra.apiUrl.trim() : '';
 
-  if (host && host !== 'localhost' && host !== '127.0.0.1') {
-    return `http://${host}:5000`;
+  if (extraApiUrl) {
+    return extraApiUrl.replace(/\/+$/, '');
   }
 
   if (configuredApiUrl) {
     return configuredApiUrl.replace(/\/+$/, '');
+  }
+
+  const expoGo = Constants.expoGoConfig || {};
+  const manifest = Constants.manifest || {};
+  const manifest2 = Constants.manifest2 || {};
+  const expoGoFromManifest =
+    manifest2.extra && manifest2.extra.expoGo ? manifest2.extra.expoGo : {};
+
+  const lanIp =
+    extractLanIp(Constants.expoConfig && Constants.expoConfig.hostUri) ||
+    extractLanIp(expoGo.debuggerHost) ||
+    extractLanIp(expoGoFromManifest.debuggerHost) ||
+    extractLanIp(manifest.debuggerHost) ||
+    extractLanIp(Constants.linkingUri) ||
+    extractLanIp(NativeModules.SourceCode && NativeModules.SourceCode.scriptURL);
+
+  if (lanIp) {
+    return 'http://' + lanIp + ':5000';
   }
 
   return 'http://localhost:5000';
@@ -27,20 +59,14 @@ const resolveApiBaseUrl = () => {
 export const API_BASE_URL = resolveApiBaseUrl();
 
 export class ApiError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
+  constructor(message, status) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
   }
 }
 
-export async function apiRequest<T>(
-  path: string,
-  options: RequestInit = {},
-  token?: string | null
-): Promise<T> {
+export async function apiRequest(path, options = {}, token) {
   const headers = new Headers(options.headers);
 
   if (options.body && !headers.has('Content-Type')) {
@@ -48,36 +74,46 @@ export async function apiRequest<T>(
   }
 
   if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+    headers.set('Authorization', 'Bearer ' + token);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(API_BASE_URL + path, {
+      ...options,
+      headers,
+    });
 
-  const responseText = await response.text();
-  let data: unknown = {};
+    const responseText = await response.text();
+    let data = {};
 
-  if (responseText) {
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      data = {};
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        data = {};
+      }
     }
+
+    if (!response.ok) {
+      const message =
+        data && typeof data.message === 'string'
+          ? data.message
+          : 'Request failed';
+
+      throw new ApiError(message, response.status);
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    throw new ApiError(
+      'Unable to connect to server (' +
+        API_BASE_URL +
+        '). Use the same Wi-Fi as your laptop, run backend on port 5000, and start Expo with LAN (not tunnel).',
+      0
+    );
   }
-
-  if (!response.ok) {
-    const message =
-      typeof data === 'object' &&
-      data !== null &&
-      'message' in data &&
-      typeof data.message === 'string'
-        ? data.message
-        : 'Request failed';
-
-    throw new ApiError(message, response.status);
-  }
-
-  return data as T;
 }

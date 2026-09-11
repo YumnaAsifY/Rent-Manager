@@ -10,7 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
 
@@ -22,14 +22,22 @@ import {
   Rental,
   fetchRentalById,
 } from '@/services/rentals';
+import ViewLocationButton from '../../components/ViewLocationButton';
+import {
+  createPaymentSession,
+  openSafepayCheckout,
+  verifyPayment,
+} from '@/services/payments';
 
 export default function RentalDetailScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const rentalId = Array.isArray(id) ? id[0] : id;
   const { token } = useAuth();
   const [rental, setRental] = useState<Rental | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [paying, setPaying] = useState(false);
 
   const loadRental = useCallback(async () => {
     if (!token || !rentalId) {
@@ -86,6 +94,50 @@ export default function RentalDetailScreen() {
       Alert.alert('Unable to dial', 'Calling is not supported on this device.');
     } catch {
       Alert.alert('Unable to dial', 'Could not open the phone dialer.');
+    }
+  };
+
+  const handlePayRent = async () => {
+    if (!token || !rental) {
+      return;
+    }
+
+    if (rental.monthlyRent == null || rental.monthlyRent <= 0) {
+      const message = 'This rental has no monthly rent set.';
+      if (Platform.OS === 'web') {
+        window.alert(message);
+      } else {
+        Alert.alert('Cannot pay', message);
+      }
+      return;
+    }
+
+    setPaying(true);
+    try {
+      const result = await createPaymentSession(token, rental.id);
+      await openSafepayCheckout(result.checkoutUrl);
+
+      if (Platform.OS !== 'web') {
+        await verifyPayment(token, {
+          paymentId: result.payment.id,
+        });
+        router.push(
+          `/payment/success?paymentId=${encodeURIComponent(result.payment.id)}` as any
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to start Safepay checkout. Please try again.';
+
+      if (Platform.OS === 'web') {
+        window.alert(message);
+      } else {
+        Alert.alert('Payment error', message);
+      }
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -152,6 +204,7 @@ export default function RentalDetailScreen() {
           <Text style={styles.detailLocation}>
             {rental.location || 'Location unavailable'}
           </Text>
+          <ViewLocationButton location={rental.location} />
           {rental.rent ? (
             <Text style={styles.detailRent}>{rental.rent}</Text>
           ) : null}
@@ -210,6 +263,29 @@ export default function RentalDetailScreen() {
                 <Text style={styles.ownerPhone}>{rental.ownerPhone}</Text>
               </TouchableOpacity>
             </View>
+          ) : null}
+
+          {rental.status === 'Active' &&
+          rental.monthlyRent != null &&
+          rental.monthlyRent > 0 ? (
+            <>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={[styles.payButton, paying && styles.payButtonDisabled]}
+                disabled={paying}
+                onPress={() => void handlePayRent()}
+                activeOpacity={0.85}
+              >
+                {paying ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="card-outline" size={18} color="#ffffff" />
+                    <Text style={styles.payButtonText}>Pay with Safepay</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
           ) : null}
         </View>
       </ScrollView>
@@ -310,7 +386,6 @@ const styles = StyleSheet.create({
   detailLocation: {
     fontSize: 16,
     color: '#64748B',
-    marginBottom: 2,
   },
   detailRent: {
     fontSize: 18,
@@ -395,5 +470,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A1A1A',
     paddingLeft: 20,
+  },
+  payButton: {
+    backgroundColor: '#1A237E',
+    borderRadius: 12,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  payButtonDisabled: {
+    opacity: 0.6,
+  },
+  payButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

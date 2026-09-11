@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import { createAsset } from '@/services/assets';
+import ViewLocationButton from '../components/ViewLocationButton';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +36,8 @@ export default function AddAssetScreen() {
   const [monthlyRent, setMonthlyRent] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<string | null>(null);
+  const [imageMimeType, setImageMimeType] = useState<string | null>(null);
+  const [imageFileName, setImageFileName] = useState<string | null>(null);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -58,7 +62,10 @@ export default function AddAssetScreen() {
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      const picked = result.assets[0];
+      setImage(picked.uri);
+      setImageMimeType(picked.mimeType ?? null);
+      setImageFileName(picked.fileName ?? null);
       setFormError('');
     }
   };
@@ -105,11 +112,20 @@ export default function AddAssetScreen() {
         description,
         monthlyRent,
         imageUri: image,
+        imageMimeType,
+        imageFileName,
       });
 
-      Alert.alert('Success', 'Asset added successfully!', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      const successMessage = 'Your asset successfully added';
+
+      if (Platform.OS === 'web') {
+        window.alert(successMessage);
+        router.back();
+      } else {
+        Alert.alert('Success', successMessage, [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
     } catch (error) {
       const message =
         error instanceof ApiError
@@ -175,6 +191,7 @@ export default function AddAssetScreen() {
             }}
             editable={!isSubmitting}
           />
+          <ViewLocationButton location={location} />
         </View>
 
         <View style={styles.inputContainer}>

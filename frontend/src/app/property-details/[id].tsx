@@ -2,6 +2,7 @@ import {
   View,
   Text,
   ScrollView,
+  TouchableOpacity,
   StyleSheet,
   StatusBar,
   ActivityIndicator,
@@ -18,6 +19,7 @@ import {
   Asset,
   fetchAssetById,
 } from '@/services/assets';
+import ViewLocationButton from '../../components/ViewLocationButton';
 
 export default function AssetDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
@@ -123,6 +125,7 @@ export default function AssetDetailScreen() {
 
           <Text style={styles.detailType}>{asset.type}</Text>
           <Text style={styles.detailLocation}>{asset.location}</Text>
+          <ViewLocationButton location={asset.location} />
           {asset.rent ? (
             <Text style={styles.detailRent}>{asset.rent}</Text>
           ) : null}
@@ -298,7 +301,6 @@ const styles = StyleSheet.create({
   detailLocation: {
     fontSize: 16,
     color: '#64748B',
-    marginBottom: 2,
   },
   detailRent: {
     fontSize: 18,

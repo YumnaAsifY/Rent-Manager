@@ -9,6 +9,8 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Alert,
+  Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +24,7 @@ import {
   Rental,
   fetchMyRentals,
   getRentalImageUrl,
+  hideExpiredRentals,
 } from '@/services/rentals';
 
 const { width, height } = Dimensions.get('window');
@@ -34,6 +37,9 @@ export default function RentalsScreen() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isRemovingSelected, setIsRemovingSelected] = useState(false);
 
   const loadRentals = useCallback(async () => {
     if (!token) {
@@ -64,8 +70,114 @@ export default function RentalsScreen() {
   useFocusEffect(
     useCallback(() => {
       void loadRentals();
+      setSelectionMode(false);
+      setSelectedIds([]);
     }, [loadRentals])
   );
+
+  const expiredRentals = rentals.filter((rental) => rental.status === 'Expired');
+  const allExpiredSelected =
+    expiredRentals.length > 0 &&
+    selectedIds.length === expiredRentals.length;
+
+  const confirmAction = (
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        onConfirm();
+      }
+      return;
+    }
+
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: onConfirm },
+    ]);
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const enterSelectionMode = () => {
+    setSelectionMode(true);
+    setSelectedIds([]);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (allExpiredSelected) {
+      setSelectedIds([]);
+      return;
+    }
+    setSelectedIds(expiredRentals.map((item) => item.id));
+  };
+
+  const runRemoveSelected = async () => {
+    const expiredIds = selectedIds.filter((id) =>
+      expiredRentals.some((rental) => rental.id === id)
+    );
+
+    if (!token || expiredIds.length === 0 || isRemovingSelected) {
+      return;
+    }
+
+    setIsRemovingSelected(true);
+
+    try {
+      await hideExpiredRentals(token, expiredIds);
+      const idSet = new Set(expiredIds);
+      setRentals((current) => current.filter((rental) => !idSet.has(rental.id)));
+      exitSelectionMode();
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to remove selected rentals. Please try again.'
+      );
+    } finally {
+      setIsRemovingSelected(false);
+    }
+  };
+
+  const confirmRemoveSelected = () => {
+    const count = selectedIds.filter((id) =>
+      expiredRentals.some((rental) => rental.id === id)
+    ).length;
+
+    if (count === 0) {
+      return;
+    }
+
+    confirmAction(
+      'Remove selected rentals?',
+      `${count} expired rental${count === 1 ? '' : 's'} will be removed from your list. Active rentals will not be affected.`,
+      () => {
+        void runRemoveSelected();
+      }
+    );
+  };
+
+  const handleCardPress = (rental: Rental) => {
+    if (selectionMode) {
+      if (rental.status === 'Expired') {
+        toggleSelect(rental.id);
+      }
+      return;
+    }
+
+    router.push(`/rental-detail/${rental.id}` as any);
+  };
 
   if (loading) {
     return (
@@ -76,11 +188,56 @@ export default function RentalsScreen() {
     );
   }
 
+  const headerRight = selectionMode ? (
+    <View style={styles.selectHeaderActions}>
+      <TouchableOpacity onPress={exitSelectionMode} style={styles.selectHeaderAction}>
+        <Text style={styles.selectHeaderActionText}>Cancel</Text>
+      </TouchableOpacity>
+      {expiredRentals.length > 0 ? (
+        <TouchableOpacity onPress={handleSelectAll} style={styles.selectHeaderAction}>
+          <Text style={styles.selectHeaderActionText}>
+            {allExpiredSelected ? 'Clear' : 'Select All'}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  ) : expiredRentals.length > 0 ? (
+    <TouchableOpacity onPress={enterSelectionMode} style={styles.selectHeaderAction}>
+      <Text style={styles.selectHeaderActionText}>Select</Text>
+    </TouchableOpacity>
+  ) : null;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
 
-      <ScreenHeader title="My Rentals" variant="dark" />
+      <ScreenHeader
+        title="My Rentals"
+        variant="dark"
+        rightAction={headerRight}
+      />
+
+      {selectionMode && selectedIds.length > 0 ? (
+        <View style={styles.selectionBar}>
+          <Text style={styles.selectionCount}>
+            {selectedIds.length} selected
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.deleteSelectedButton,
+              isRemovingSelected && styles.disabled,
+            ]}
+            onPress={confirmRemoveSelected}
+            disabled={isRemovingSelected}
+          >
+            {isRemovingSelected ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.deleteSelectedText}>Delete Selected</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       <ScrollView
         style={styles.scrollView}
@@ -105,20 +262,35 @@ export default function RentalsScreen() {
         ) : (
           rentals.map((rental) => {
             const imageUrl = getRentalImageUrl(rental.image);
+            const isExpired = rental.status === 'Expired';
+            const isSelected = selectedIds.includes(rental.id);
 
             return (
               <TouchableOpacity
                 key={rental.id}
-                style={[styles.card, isWeb && styles.cardWeb]}
-                onPress={() =>
-                  router.push(`/rental-detail/${rental.id}` as any)
-                }
-                activeOpacity={0.7}
+                style={[
+                  styles.card,
+                  isWeb && styles.cardWeb,
+                  isSelected && styles.cardSelected,
+                  selectionMode && !isExpired && styles.cardLocked,
+                ]}
+                onPress={() => handleCardPress(rental)}
+                activeOpacity={selectionMode && !isExpired ? 1 : 0.7}
               >
+                {selectionMode && isExpired ? (
+                  <View style={styles.checkboxWrap}>
+                    <Ionicons
+                      name={isSelected ? 'checkbox' : 'square-outline'}
+                      size={22}
+                      color={isSelected ? '#1A237E' : '#94A3B8'}
+                    />
+                  </View>
+                ) : null}
+
                 <TouchableOpacity
                   style={styles.imageContainer}
                   activeOpacity={0.85}
-                  disabled={!imageUrl}
+                  disabled={selectionMode || !imageUrl}
                   onPress={() => {
                     if (imageUrl) {
                       setPreviewImageUrl(imageUrl);
@@ -239,6 +411,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748B',
   },
+  selectHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  selectHeaderAction: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  selectHeaderActionText: {
+    fontSize: 13,
+    color: '#ffffff',
+    fontWeight: '500',
+  },
+  selectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#EEF2FF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E7FF',
+  },
+  selectionCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A237E',
+  },
+  deleteSelectedButton: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  deleteSelectedText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  disabled: {
+    opacity: 0.7,
+  },
   card: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
@@ -256,6 +473,17 @@ const styles = StyleSheet.create({
   },
   cardWeb: {
     width: '100%',
+  },
+  cardSelected: {
+    borderColor: '#1A237E',
+    backgroundColor: '#F5F7FF',
+  },
+  cardLocked: {
+    opacity: 0.55,
+  },
+  checkboxWrap: {
+    marginRight: 12,
+    justifyContent: 'center',
   },
   imageContainer: {
     width: 80,

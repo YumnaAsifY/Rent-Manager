@@ -117,6 +117,7 @@ interface DashboardCardProps {
   iconColor?: string;
   iconBg?: string;
   desktop?: boolean;
+  showViewDetails?: boolean;
 }
 
 export default function DashboardCard({
@@ -130,6 +131,7 @@ export default function DashboardCard({
   iconColor = '#1a237e',
   iconBg = '#e3f2fd',
   desktop = false,
+  showViewDetails = false,
 }: DashboardCardProps) {
   return (
     <TouchableOpacity 
@@ -153,6 +155,17 @@ export default function DashboardCard({
 
       {value && <Text style={[styles.cardValue, { color: iconColor }]}>{value}</Text>}
       {subtitle && <Text style={styles.cardSubtitle}>{subtitle}</Text>}
+
+      {showViewDetails ? (
+        <View style={styles.cardFooter}>
+          <Text style={styles.cardAction}>View Details</Text>
+          <Ionicons
+            name="chevron-forward-circle"
+            size={24}
+            color={iconColor}
+          />
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -208,5 +221,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     marginBottom: 12,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  cardAction: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
   },
 });

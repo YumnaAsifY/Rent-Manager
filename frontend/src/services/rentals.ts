@@ -74,3 +74,17 @@ export async function fetchRentalById(
 
   return data.rental;
 }
+
+export async function hideExpiredRentals(
+  token: string,
+  ids: string[]
+): Promise<void> {
+  await apiRequest<{ message: string }>(
+    '/api/rentals/hide-bulk',
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ ids }),
+    },
+    token
+  );
+}

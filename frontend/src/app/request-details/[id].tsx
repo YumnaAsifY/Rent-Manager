@@ -26,6 +26,8 @@ import {
   getAssetImageUrl,
   rejectRentalRequest,
 } from '@/services/rentalRequests';
+import ViewLocationButton from '../../components/ViewLocationButton';
+import { submitReport } from '@/services/reports';
 
 export default function RequestDetailsScreen() {
   const router = useRouter();
@@ -36,6 +38,7 @@ export default function RequestDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isReporting, setIsReporting] = useState(false);
 
   const loadRequest = useCallback(async () => {
     if (!token || !requestId) {
@@ -187,6 +190,53 @@ export default function RequestDetailsScreen() {
     );
   };
 
+  const handleOwnerReport = (
+    type: 'spam_misuse' | 'unpaid_rent',
+    title: string,
+    message: string
+  ) => {
+    if (!token || !requestId || isReporting) {
+      return;
+    }
+
+    const run = async () => {
+      setIsReporting(true);
+      try {
+        await submitReport(token, { type, requestId });
+        const ok = 'Report submitted. Admin will review it.';
+        if (Platform.OS === 'web') {
+          window.alert(ok);
+        } else {
+          Alert.alert('Reported', ok);
+        }
+      } catch (error) {
+        const text =
+          error instanceof ApiError
+            ? error.message
+            : 'Unable to submit report.';
+        if (Platform.OS === 'web') {
+          window.alert(text);
+        } else {
+          Alert.alert('Error', text);
+        }
+      } finally {
+        setIsReporting(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) {
+        void run();
+      }
+      return;
+    }
+
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Report', style: 'destructive', onPress: () => void run() },
+    ]);
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -267,6 +317,7 @@ export default function RequestDetailsScreen() {
           <Text style={styles.detailLocation}>
             {request.location || 'Location unavailable'}
           </Text>
+          <ViewLocationButton location={request.location} />
           {request.rent ? (
             <Text style={styles.detailRent}>{request.rent}</Text>
           ) : null}
@@ -343,6 +394,36 @@ export default function RequestDetailsScreen() {
                   This request is {request.status.toLowerCase()}.
                 </Text>
               )}
+
+              <TouchableOpacity
+                style={styles.reportLink}
+                onPress={() =>
+                  handleOwnerReport(
+                    'spam_misuse',
+                    'Report user',
+                    'Report this tenant for spam or platform misuse?'
+                  )
+                }
+                disabled={isReporting}
+              >
+                <Text style={styles.reportLinkText}>Report spam / misuse</Text>
+              </TouchableOpacity>
+
+              {request.status === 'Accepted' ? (
+                <TouchableOpacity
+                  style={styles.reportLink}
+                  onPress={() =>
+                    handleOwnerReport(
+                      'unpaid_rent',
+                      'Report unpaid rent',
+                      'Report that this tenant has not paid rent?'
+                    )
+                  }
+                  disabled={isReporting}
+                >
+                  <Text style={styles.reportLinkText}>Report unpaid rent</Text>
+                </TouchableOpacity>
+              ) : null}
             </>
           ) : (
             <>
@@ -490,7 +571,6 @@ const styles = StyleSheet.create({
   detailLocation: {
     fontSize: 16,
     color: '#64748B',
-    marginBottom: 2,
   },
   detailRent: {
     fontSize: 18,
@@ -605,5 +685,15 @@ const styles = StyleSheet.create({
   linkButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  reportLink: {
+    marginTop: 12,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  reportLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
   },
 });

@@ -216,7 +216,10 @@ const createRentalRequest = async (req, res) => {
 const getMyRentalRequests = async (req, res) => {
   try {
     const requests = await populateRequest(
-      RentalRequest.find({ tenant: req.userId }).sort({ createdAt: -1 })
+      RentalRequest.find({
+        tenant: req.userId,
+        tenantDeleted: { $ne: true },
+      }).sort({ createdAt: -1 })
     );
 
     return res.status(200).json({
@@ -234,7 +237,10 @@ const getMyRentalRequests = async (req, res) => {
 const getOwnerRentalRequests = async (req, res) => {
   try {
     const requests = await populateRequest(
-      RentalRequest.find({ owner: req.userId }).sort({ createdAt: -1 })
+      RentalRequest.find({
+        owner: req.userId,
+        ownerDeleted: { $ne: true },
+      }).sort({ createdAt: -1 })
     );
 
     return res.status(200).json({
@@ -255,10 +261,12 @@ const getMyPendingRequestsCount = async (req, res) => {
       RentalRequest.countDocuments({
         tenant: req.userId,
         status: 'Pending',
+        tenantDeleted: { $ne: true },
       }),
       RentalRequest.countDocuments({
         owner: req.userId,
         status: 'Pending',
+        ownerDeleted: { $ne: true },
       }),
     ]);
 
@@ -521,6 +529,83 @@ const rejectRentalRequest = async (req, res) => {
   }
 };
 
+const hideRentalRequest = async (req, res) => {
+  try {
+    const request = await RentalRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({ message: 'Request not found' });
+    }
+
+    const userId = req.userId.toString();
+    const isOwner = request.owner.toString() === userId;
+    const isTenant = request.tenant.toString() === userId;
+
+    if (!isOwner && !isTenant) {
+      return res.status(403).json({
+        message: 'You do not have permission to remove this request',
+      });
+    }
+
+    if (isOwner) {
+      request.ownerDeleted = true;
+    } else {
+      request.tenantDeleted = true;
+    }
+
+    await request.save();
+
+    return res.status(200).json({
+      message: 'Request removed from your list',
+    });
+  } catch (error) {
+    console.error('Hide rental request error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while removing rental request',
+    });
+  }
+};
+
+const hideRentalRequests = async (req, res) => {
+  try {
+    const rawIds = Array.isArray(req.body?.ids) ? req.body.ids : [];
+    const ids = [
+      ...new Set(
+        rawIds.filter(
+          (id) => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)
+        )
+      ),
+    ];
+
+    if (ids.length === 0) {
+      return res.status(400).json({
+        message: 'Select at least one request to remove',
+      });
+    }
+
+    await RentalRequest.updateMany(
+      { _id: { $in: ids }, owner: req.userId },
+      { $set: { ownerDeleted: true } }
+    );
+
+    await RentalRequest.updateMany(
+      { _id: { $in: ids }, tenant: req.userId },
+      { $set: { tenantDeleted: true } }
+    );
+
+    return res.status(200).json({
+      message: 'Requests removed from your list',
+    });
+  } catch (error) {
+    console.error('Hide rental requests error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while removing rental requests',
+    });
+  }
+};
+
 module.exports = {
   createRentalRequest,
   getMyRentalRequests,
@@ -529,4 +614,6 @@ module.exports = {
   getRentalRequestById,
   acceptRentalRequest,
   rejectRentalRequest,
+  hideRentalRequest,
+  hideRentalRequests,
 };

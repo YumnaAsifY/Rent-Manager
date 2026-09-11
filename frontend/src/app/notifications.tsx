@@ -156,7 +156,43 @@ export default function NotificationsScreen() {
 
     if (notification.type === 'rental_request_accepted') {
       router.push('/rentals' as any);
+      return;
     }
+
+    if (notification.type.startsWith('payment_')) {
+      if (notification.audience === 'owner') {
+        router.push('/properties' as any);
+        return;
+      }
+      if (notification.relatedRentalId) {
+        router.push(`/rental-detail/${notification.relatedRentalId}` as any);
+        return;
+      }
+      router.push('/payment' as any);
+    }
+  };
+
+  const isPaymentNotification = (notification: AppNotification) =>
+    notification.type.startsWith('payment_');
+
+  const requestNotifications = notifications.filter(
+    (notification) => !isPaymentNotification(notification)
+  );
+  const paymentNotifications = notifications.filter(isPaymentNotification);
+
+  const renderSection = (title: string, items: AppNotification[]) => {
+    if (items.length === 0) {
+      return null;
+    }
+
+    return (
+      <>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        {items.map((notification) => renderNotificationCard(notification))}
+      </>
+    );
   };
 
   const handleMarkAllRead = async () => {
@@ -403,26 +439,8 @@ export default function NotificationsScreen() {
           </View>
         ) : (
           <>
-            {unreadCount > 0 && (
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>New</Text>
-              </View>
-            )}
-
-            {notifications
-              .filter((notification) => !notification.isRead)
-              .map((notification) => renderNotificationCard(notification))}
-
-            {notifications.filter((notification) => notification.isRead)
-              .length > 0 && (
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Earlier</Text>
-              </View>
-            )}
-
-            {notifications
-              .filter((notification) => notification.isRead)
-              .map((notification) => renderNotificationCard(notification))}
+            {renderSection('Rental Requests', requestNotifications)}
+            {renderSection('Payments', paymentNotifications)}
           </>
         )}
       </ScrollView>

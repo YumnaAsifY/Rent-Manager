@@ -309,6 +309,7 @@ export default function HomeScreen() {
                       iconColor={card.iconColor}
                       iconBg={card.iconBg}
                       desktop
+                      showViewDetails
                     />
                   </View>
                 ))}
@@ -354,6 +355,7 @@ export default function HomeScreen() {
               cardBg={card.cardBg}
               iconColor={card.iconColor}
               iconBg={card.iconBg}
+              showViewDetails
             />
           ))}
         </View>

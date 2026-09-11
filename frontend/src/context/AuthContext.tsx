@@ -16,11 +16,19 @@ import {
   storeToken,
 } from '@/services/authStorage';
 
+export type PayoutMethod = 'none' | 'jazzcash' | 'easypaisa' | 'bank';
+
 export type AuthUser = {
   id: string;
   name: string;
   phoneNumber: string;
   email: string;
+  role?: 'user' | 'admin';
+  isActive?: boolean;
+  payoutMethod?: PayoutMethod;
+  payoutAccountName?: string;
+  payoutNumber?: string;
+  payoutBankName?: string;
 };
 
 type LoginResponse = {
@@ -40,13 +48,19 @@ type AuthContextValue = {
   login: (
     email: string,
     password: string
-  ) => Promise<void>;
+  ) => Promise<AuthUser>;
 
   logout: () => Promise<void>;
 
   updateProfile: (
     name: string,
-    phoneNumber: string
+    phoneNumber: string,
+    payout?: {
+      payoutMethod: PayoutMethod;
+      payoutAccountName: string;
+      payoutNumber: string;
+      payoutBankName: string;
+    }
   ) => Promise<void>;
 
   changePassword: (
@@ -133,6 +147,7 @@ export function AuthProvider({
 
       setToken(data.token);
       setUser(data.user);
+      return data.user;
     },
     []
   );
@@ -149,7 +164,13 @@ export function AuthProvider({
   const updateProfile = useCallback(
     async (
       name: string,
-      phoneNumber: string
+      phoneNumber: string,
+      payout?: {
+        payoutMethod: PayoutMethod;
+        payoutAccountName: string;
+        payoutNumber: string;
+        payoutBankName: string;
+      }
     ) => {
       if (!token) {
         throw new ApiError(
@@ -165,12 +186,12 @@ export function AuthProvider({
           body: JSON.stringify({
             name,
             phoneNumber,
+            ...(payout || {}),
           }),
         },
         token
       );
 
-      // Immediately update the authenticated user state
       setUser(data.user);
     },
     [token]

@@ -7,6 +7,9 @@ export type AppNotification = {
   message: string;
   relatedRequestId: string | null;
   relatedAssetId: string | null;
+  relatedRentalId?: string | null;
+  relatedPaymentId?: string | null;
+  audience?: 'tenant' | 'owner' | null;
   isRead: boolean;
   read: boolean;
   createdAt?: string;

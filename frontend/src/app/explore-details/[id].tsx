@@ -25,6 +25,8 @@ import {
   createRentalRequest,
   fetchExploreAssetById,
 } from '@/services/rentalRequests';
+import { submitReport } from '@/services/reports';
+import ViewLocationButton from '../../components/ViewLocationButton';
 
 const isWebPlatform = Platform.OS === 'web';
 
@@ -54,6 +56,7 @@ export default function ExploreAssetDetailsScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReporting, setIsReporting] = useState(false);
   const [formError, setFormError] = useState('');
 
   const [startDate, setStartDate] = useState(new Date());
@@ -138,6 +141,52 @@ export default function ExploreAssetDetailsScreen() {
   const openRequestModal = () => {
     setFormError('');
     setModalVisible(true);
+  };
+
+  const handleReportListing = () => {
+    if (!token || !asset || isReporting || asset.isOwnedByMe) {
+      return;
+    }
+
+    const run = async () => {
+      setIsReporting(true);
+      try {
+        await submitReport(token, {
+          type: 'fake_property',
+          assetId: asset.id,
+        });
+        const ok = 'Report submitted. Admin will review it.';
+        if (Platform.OS === 'web') {
+          window.alert(ok);
+        } else {
+          Alert.alert('Reported', ok);
+        }
+      } catch (error) {
+        const text =
+          error instanceof ApiError
+            ? error.message
+            : 'Unable to submit report.';
+        if (Platform.OS === 'web') {
+          window.alert(text);
+        } else {
+          Alert.alert('Error', text);
+        }
+      } finally {
+        setIsReporting(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Report this listing as fake or misleading?')) {
+        void run();
+      }
+      return;
+    }
+
+    Alert.alert('Report listing', 'Report this listing as fake or misleading?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Report', style: 'destructive', onPress: () => void run() },
+    ]);
   };
 
   const handleSubmitRequest = async () => {
@@ -286,6 +335,7 @@ export default function ExploreAssetDetailsScreen() {
 
           <Text style={styles.detailType}>{asset.type}</Text>
           <Text style={styles.detailLocation}>{asset.location}</Text>
+          <ViewLocationButton location={asset.location} />
           {asset.rent ? (
             <Text style={styles.detailRent}>{asset.rent}</Text>
           ) : null}
@@ -347,6 +397,18 @@ export default function ExploreAssetDetailsScreen() {
             <Text style={styles.ownedHint}>
               This is your asset. You cannot request it.
             </Text>
+          ) : null}
+
+          {!isOwnedByMe ? (
+            <TouchableOpacity
+              style={styles.reportButton}
+              onPress={handleReportListing}
+              disabled={isReporting}
+            >
+              <Text style={styles.reportButtonText}>
+                {isReporting ? 'Reporting...' : 'Report listing'}
+              </Text>
+            </TouchableOpacity>
           ) : null}
         </View>
       </ScrollView>
@@ -602,7 +664,6 @@ const styles = StyleSheet.create({
   detailLocation: {
     fontSize: 16,
     color: '#64748B',
-    marginBottom: 2,
   },
   detailRent: {
     fontSize: 18,
@@ -673,6 +734,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
+  },
+  reportButton: {
+    marginTop: 16,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  reportButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
   },
   modalOverlay: {
     flex: 1,

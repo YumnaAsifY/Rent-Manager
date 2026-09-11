@@ -9,6 +9,8 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Alert,
+  Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +25,8 @@ import {
   fetchMyRentalRequests,
   fetchOwnerRentalRequests,
   getAssetImageUrl,
+  hideRentalRequest,
+  hideRentalRequests,
 } from '@/services/rentalRequests';
 
 const { width, height } = Dimensions.get('window');
@@ -36,6 +40,10 @@ export default function RequestsScreen() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isRemovingSelected, setIsRemovingSelected] = useState(false);
 
   const loadRequests = useCallback(async () => {
     if (!token) {
@@ -72,23 +80,192 @@ export default function RequestsScreen() {
   useFocusEffect(
     useCallback(() => {
       void loadRequests();
+      setSelectionMode(false);
+      setSelectedIds([]);
     }, [loadRequests])
   );
 
+  const visibleRequests = [...incoming, ...sent];
+  const allSelected =
+    visibleRequests.length > 0 &&
+    selectedIds.length === visibleRequests.length;
+
+  const confirmAction = (
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        onConfirm();
+      }
+      return;
+    }
+
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: onConfirm },
+    ]);
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const enterSelectionMode = () => {
+    setSelectionMode(true);
+    setSelectedIds([]);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds([]);
+      return;
+    }
+    setSelectedIds(visibleRequests.map((item) => item.id));
+  };
+
+  const removeFromState = (ids: string[]) => {
+    const idSet = new Set(ids);
+    setIncoming((current) => current.filter((request) => !idSet.has(request.id)));
+    setSent((current) => current.filter((request) => !idSet.has(request.id)));
+    setSelectedIds((prev) => prev.filter((id) => !idSet.has(id)));
+  };
+
+  const runRemove = async (requestId: string) => {
+    if (!token || !requestId || removingId) {
+      return;
+    }
+
+    setRemovingId(requestId);
+
+    try {
+      await hideRentalRequest(token, requestId);
+      removeFromState([requestId]);
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to remove this request. Please try again.'
+      );
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const confirmRemove = (requestId: string) => {
+    if (!requestId || removingId) {
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'Remove this request from your list? This will not cancel the request or affect the other party.'
+      );
+      if (confirmed) {
+        void runRemove(requestId);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Remove Request',
+      'Remove this request from your list? This will not cancel the request or affect the other party.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => void runRemove(requestId),
+        },
+      ]
+    );
+  };
+
+  const runRemoveSelected = async () => {
+    if (!token || selectedIds.length === 0 || isRemovingSelected) {
+      return;
+    }
+
+    setIsRemovingSelected(true);
+
+    try {
+      await hideRentalRequests(token, selectedIds);
+      removeFromState(selectedIds);
+      exitSelectionMode();
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to remove selected requests. Please try again.'
+      );
+    } finally {
+      setIsRemovingSelected(false);
+    }
+  };
+
+  const confirmRemoveSelected = () => {
+    const count = selectedIds.length;
+    if (count === 0) {
+      return;
+    }
+
+    confirmAction(
+      'Remove selected requests?',
+      `${count} selected request${count === 1 ? '' : 's'} will be removed from your list only. This will not cancel the request or affect the other party.`,
+      () => {
+        void runRemoveSelected();
+      }
+    );
+  };
+
+  const handleCardPress = (requestId: string) => {
+    if (selectionMode) {
+      toggleSelect(requestId);
+      return;
+    }
+
+    router.push(`/request-details/${requestId}` as any);
+  };
+
   const renderRequestCard = (request: RentalRequestItem, showTenant: boolean) => {
     const imageUrl = getAssetImageUrl(request.image);
+    const isSelected = selectedIds.includes(request.id);
 
     return (
       <TouchableOpacity
         key={`${showTenant ? 'in' : 'sent'}-${request.id}`}
-        style={[styles.card, isWeb && styles.cardWeb]}
-        onPress={() => router.push(`/request-details/${request.id}` as any)}
+        style={[
+          styles.card,
+          isWeb && styles.cardWeb,
+          isSelected && styles.cardSelected,
+        ]}
+        onPress={() => handleCardPress(request.id)}
         activeOpacity={0.7}
       >
+        {selectionMode ? (
+          <View style={styles.checkboxWrap}>
+            <Ionicons
+              name={isSelected ? 'checkbox' : 'square-outline'}
+              size={22}
+              color={isSelected ? '#1A237E' : '#94A3B8'}
+            />
+          </View>
+        ) : null}
+
         <TouchableOpacity
           style={styles.imageContainer}
           activeOpacity={0.85}
-          disabled={!imageUrl}
+          disabled={selectionMode || !imageUrl}
           onPress={() => {
             if (imageUrl) {
               setPreviewImageUrl(imageUrl);
@@ -111,20 +288,36 @@ export default function RequestsScreen() {
         <View style={styles.cardContent}>
           <View style={styles.cardHeaderRow}>
             <Text style={styles.assetName}>{request.assetName}</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: getStatusBg(request.status) },
-              ]}
-            >
-              <Text
+            <View style={styles.headerActions}>
+              <View
                 style={[
-                  styles.statusText,
-                  { color: getStatusColor(request.status) },
+                  styles.statusBadge,
+                  { backgroundColor: getStatusBg(request.status) },
                 ]}
               >
-                {request.status}
-              </Text>
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: getStatusColor(request.status) },
+                  ]}
+                >
+                  {request.status}
+                </Text>
+              </View>
+              {!selectionMode ? (
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  disabled={removingId === request.id}
+                  onPress={() => confirmRemove(request.id)}
+                >
+                  {removingId === request.id ? (
+                    <ActivityIndicator size="small" color="#94A3B8" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={18} color="#94A3B8" />
+                  )}
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
           <Text style={styles.locationText}>
@@ -153,11 +346,56 @@ export default function RequestsScreen() {
     );
   }
 
+  const headerRight = selectionMode ? (
+    <View style={styles.selectHeaderActions}>
+      <TouchableOpacity onPress={exitSelectionMode} style={styles.selectHeaderAction}>
+        <Text style={styles.selectHeaderActionText}>Cancel</Text>
+      </TouchableOpacity>
+      {visibleRequests.length > 0 ? (
+        <TouchableOpacity onPress={handleSelectAll} style={styles.selectHeaderAction}>
+          <Text style={styles.selectHeaderActionText}>
+            {allSelected ? 'Clear' : 'Select All'}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  ) : visibleRequests.length > 0 ? (
+    <TouchableOpacity onPress={enterSelectionMode} style={styles.selectHeaderAction}>
+      <Text style={styles.selectHeaderActionText}>Select</Text>
+    </TouchableOpacity>
+  ) : null;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
 
-      <ScreenHeader title="Requests" variant="dark" />
+      <ScreenHeader
+        title="Requests"
+        variant="dark"
+        rightAction={headerRight}
+      />
+
+      {selectionMode && selectedIds.length > 0 ? (
+        <View style={styles.selectionBar}>
+          <Text style={styles.selectionCount}>
+            {selectedIds.length} selected
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.deleteSelectedButton,
+              isRemovingSelected && styles.disabled,
+            ]}
+            onPress={confirmRemoveSelected}
+            disabled={isRemovingSelected}
+          >
+            {isRemovingSelected ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.deleteSelectedText}>Delete Selected</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       <ScrollView
         style={styles.scrollView}
@@ -265,6 +503,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748B',
   },
+  selectHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  selectHeaderAction: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  selectHeaderActionText: {
+    fontSize: 13,
+    color: '#ffffff',
+    fontWeight: '500',
+  },
+  selectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#EEF2FF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E7FF',
+  },
+  selectionCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A237E',
+  },
+  deleteSelectedButton: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  deleteSelectedText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  disabled: {
+    opacity: 0.7,
+  },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
@@ -296,6 +579,14 @@ const styles = StyleSheet.create({
   },
   cardWeb: {
     width: '100%',
+  },
+  cardSelected: {
+    borderColor: '#1A237E',
+    backgroundColor: '#F5F7FF',
+  },
+  checkboxWrap: {
+    marginRight: 12,
+    justifyContent: 'center',
   },
   imageContainer: {
     width: 80,
@@ -330,6 +621,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A1A1A',
     flex: 1,
+    marginRight: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  removeButton: {
+    padding: 2,
   },
   statusBadge: {
     paddingHorizontal: 10,

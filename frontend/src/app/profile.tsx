@@ -451,6 +451,18 @@ export default function ProfileScreen() {
               <Text style={styles.profileName}>{user?.name || 'User'}</Text>
               <Text style={styles.profileEmail}>{user?.email || ''}</Text>
               <Text style={styles.profilePhone}>{user?.phoneNumber || ''}</Text>
+              {user?.payoutMethod && user.payoutMethod !== 'none' ? (
+                <Text style={styles.profilePhone}>
+                  {user.payoutMethod === 'jazzcash'
+                    ? 'JazzCash'
+                    : user.payoutMethod === 'easypaisa'
+                      ? 'EasyPaisa'
+                      : user.payoutBankName || 'Bank'}
+                  {user.payoutNumber ? ` · ${user.payoutNumber}` : ''}
+                </Text>
+              ) : (
+                <Text style={styles.profilePhone}>Payout details not saved</Text>
+              )}
             </View>
           </View>
         </View>
@@ -484,10 +496,11 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
+        {Platform.OS !== 'web' ? (
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>

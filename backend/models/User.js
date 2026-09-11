@@ -38,6 +38,49 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
+      index: true,
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+
+    deactivationReason: {
+      type: String,
+      enum: ['fraud_scam', 'platform_misuse', 'non_payment'],
+      default: undefined,
+    },
+
+    payoutMethod: {
+      type: String,
+      enum: ['none', 'jazzcash', 'easypaisa', 'bank'],
+      default: 'none',
+    },
+
+    payoutAccountName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    payoutNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    payoutBankName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   {
     timestamps: true,

@@ -16,7 +16,14 @@ import { useState } from 'react';
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
 
-import { useAuth } from '@/context/AuthContext';
+import { PayoutMethod, useAuth } from '@/context/AuthContext';
+
+const PAYOUT_OPTIONS: { key: PayoutMethod; label: string }[] = [
+  { key: 'none', label: 'None' },
+  { key: 'jazzcash', label: 'JazzCash' },
+  { key: 'easypaisa', label: 'EasyPaisa' },
+  { key: 'bank', label: 'Bank' },
+];
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -26,7 +33,6 @@ export default function EditProfileScreen() {
     updateProfile,
   } = useAuth();
 
-  // Start with the user's real current information
   const [name, setName] = useState(
     user?.name || ''
   );
@@ -35,9 +41,19 @@ export default function EditProfileScreen() {
     user?.phoneNumber || ''
   );
 
+  const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>(
+    user?.payoutMethod || 'none'
+  );
+  const [payoutAccountName, setPayoutAccountName] = useState(
+    user?.payoutAccountName || ''
+  );
+  const [payoutNumber, setPayoutNumber] = useState(user?.payoutNumber || '');
+  const [payoutBankName, setPayoutBankName] = useState(
+    user?.payoutBankName || ''
+  );
+
   const [isSaving, setIsSaving] = useState(false);
 
-  // Allow numbers only, maximum 11 digits
   const validatePhoneNumber = (text: string) => {
     const numericText = text.replace(
       /[^0-9]/g,
@@ -49,11 +65,17 @@ export default function EditProfileScreen() {
     }
   };
 
+  const validateWalletNumber = (text: string) => {
+    const numericText = text.replace(/[^0-9]/g, '');
+    if (numericText.length <= 11) {
+      setPayoutNumber(numericText);
+    }
+  };
+
   const handleSaveChanges = async () => {
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
 
-    // Name validation
     if (!trimmedName) {
       Alert.alert(
         'Error',
@@ -62,7 +84,6 @@ export default function EditProfileScreen() {
       return;
     }
 
-    // Phone validation
     if (!trimmedPhone) {
       Alert.alert(
         'Error',
@@ -79,13 +100,40 @@ export default function EditProfileScreen() {
       return;
     }
 
+    if (payoutMethod !== 'none') {
+      if (!payoutAccountName.trim()) {
+        Alert.alert('Error', 'Please enter the account holder name.');
+        return;
+      }
+
+      if (payoutMethod === 'bank') {
+        if (!payoutBankName.trim()) {
+          Alert.alert('Error', 'Please enter the bank name.');
+          return;
+        }
+
+        if (payoutNumber.replace(/\s+/g, '').length < 8) {
+          Alert.alert('Error', 'Enter a valid bank account number or IBAN.');
+          return;
+        }
+      } else if (payoutNumber.length !== 11) {
+        Alert.alert('Error', 'Wallet number must be exactly 11 digits.');
+        return;
+      }
+    }
+
     try {
       setIsSaving(true);
 
-      // Real backend update
       await updateProfile(
         trimmedName,
-        trimmedPhone
+        trimmedPhone,
+        {
+          payoutMethod,
+          payoutAccountName: payoutAccountName.trim(),
+          payoutNumber: payoutNumber.replace(/\s+/g, ''),
+          payoutBankName: payoutBankName.trim(),
+        }
       );
 
       Alert.alert(
@@ -135,7 +183,6 @@ export default function EditProfileScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Full Name */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>
             Full Name
@@ -152,7 +199,6 @@ export default function EditProfileScreen() {
           />
         </View>
 
-        {/* Phone Number */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>
             Phone Number
@@ -179,7 +225,93 @@ export default function EditProfileScreen() {
             )}
         </View>
 
-        {/* Save Button */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Owner payout method</Text>
+          <Text style={styles.hintText}>
+            Admin uses this to send your rent share (JazzCash, EasyPaisa, or bank).
+          </Text>
+          <View style={styles.methodRow}>
+            {PAYOUT_OPTIONS.map((option) => {
+              const active = payoutMethod === option.key;
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[styles.methodChip, active && styles.methodChipActive]}
+                  onPress={() => setPayoutMethod(option.key)}
+                  disabled={isSaving}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.methodChipText,
+                      active && styles.methodChipTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {payoutMethod !== 'none' ? (
+          <>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Account holder name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Name on JazzCash / bank account"
+                placeholderTextColor="#94A3B8"
+                value={payoutAccountName}
+                onChangeText={setPayoutAccountName}
+                editable={!isSaving}
+                autoCapitalize="words"
+              />
+            </View>
+
+            {payoutMethod === 'bank' ? (
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Bank name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. HBL, Meezan"
+                  placeholderTextColor="#94A3B8"
+                  value={payoutBankName}
+                  onChangeText={setPayoutBankName}
+                  editable={!isSaving}
+                  autoCapitalize="words"
+                />
+              </View>
+            ) : null}
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>
+                {payoutMethod === 'bank'
+                  ? 'Account number / IBAN'
+                  : 'Wallet number'}
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder={
+                  payoutMethod === 'bank'
+                    ? 'Account number or IBAN'
+                    : '11-digit wallet number'
+                }
+                placeholderTextColor="#94A3B8"
+                keyboardType={payoutMethod === 'bank' ? 'default' : 'phone-pad'}
+                value={payoutNumber}
+                onChangeText={
+                  payoutMethod === 'bank' ? setPayoutNumber : validateWalletNumber
+                }
+                maxLength={payoutMethod === 'bank' ? 34 : 11}
+                editable={!isSaving}
+                autoCapitalize="characters"
+              />
+            </View>
+          </>
+        ) : null}
+
         <TouchableOpacity
           style={[
             styles.saveButton,
@@ -238,6 +370,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A1A1A',
     marginBottom: 6,
+  },
+
+  hintText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+
+  methodRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  methodChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C5CAE9',
+  },
+
+  methodChipActive: {
+    backgroundColor: '#1A237E',
+    borderColor: '#1A237E',
+  },
+
+  methodChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3949AB',
+  },
+
+  methodChipTextActive: {
+    color: '#FFFFFF',
   },
 
   input: {

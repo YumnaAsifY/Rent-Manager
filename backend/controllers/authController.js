@@ -3,6 +3,20 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { sendPasswordResetEmail } = require('../utils/sendEmail');
+const {
+  PAYOUT_METHODS,
+  serializePayout,
+} = require('../utils/payout');
+
+const serializePublicUser = (user) => ({
+  id: user._id.toString(),
+  name: user.name,
+  phoneNumber: user.phoneNumber,
+  email: user.email,
+  role: user.role === 'admin' ? 'admin' : 'user',
+  isActive: user.isActive !== false,
+  ...serializePayout(user),
+});
 
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -38,21 +52,21 @@ const registerUser = async (req, res) => {
       });
     }
 
-    if (typeof email !== 'string' || /[A-Z]/.test(email)) {
-      return res.status(400).json({
-        message: 'Email must contain lowercase letters only',
-      });
-    }
-
-    const trimmedEmail = email.trim();
-
-    if (!/^[^\s@]+@gmail\.com$/.test(trimmedEmail)) {
+    if (typeof email !== 'string') {
       return res.status(400).json({
         message: 'Please enter a valid Gmail address',
       });
     }
 
-    const existingEmail = await User.findOne({ email: trimmedEmail });
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!/^[^\s@]+@gmail\.com$/.test(normalizedEmail)) {
+      return res.status(400).json({
+        message: 'Please enter a valid Gmail address',
+      });
+    }
+
+    const existingEmail = await User.findOne({ email: normalizedEmail });
 
     if (existingEmail) {
       return res.status(400).json({
@@ -73,18 +87,15 @@ const registerUser = async (req, res) => {
     const user = await User.create({
       name,
       phoneNumber,
-      email: trimmedEmail,
+      email: normalizedEmail,
       password: hashedPassword,
+      role: 'user',
+      isActive: true,
     });
 
     res.status(201).json({
       message: 'Registration successful',
-      user: {
-        id: user._id,
-        name: user.name,
-        phoneNumber: user.phoneNumber,
-        email: user.email,
-      },
+      user: serializePublicUser(user),
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -105,7 +116,12 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const normalizedEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      '+password'
+    );
 
     if (!user) {
       return res.status(400).json({
@@ -124,6 +140,12 @@ const loginUser = async (req, res) => {
       });
     }
 
+    if (user.isActive === false) {
+      return res.status(403).json({
+        message: 'This account has been deactivated',
+      });
+    }
+
     if (!process.env.JWT_SECRET) {
       console.error('Login error: JWT_SECRET is not configured');
 
@@ -137,12 +159,7 @@ const loginUser = async (req, res) => {
     res.status(200).json({
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        phoneNumber: user.phoneNumber,
-        email: user.email,
-      },
+      user: serializePublicUser(user),
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -163,13 +180,14 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
+    if (user.isActive === false) {
+      return res.status(401).json({
+        message: 'This account has been deactivated',
+      });
+    }
+
     return res.status(200).json({
-      user: {
-        id: user._id,
-        name: user.name,
-        phoneNumber: user.phoneNumber,
-        email: user.email,
-      },
+      user: serializePublicUser(user),
     });
   } catch (error) {
     console.error('Session validation error:', error);
@@ -182,7 +200,7 @@ const getCurrentUser = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { name, phoneNumber } = req.body;
+    const { name, phoneNumber, payoutMethod } = req.body;
 
     if (!name || !phoneNumber) {
       return res.status(400).json({
@@ -216,12 +234,65 @@ const updateProfile = async (req, res) => {
       });
     }
 
+    const updates = {
+      name: trimmedName,
+      phoneNumber: trimmedPhoneNumber,
+    };
+
+    if (payoutMethod !== undefined) {
+      if (!PAYOUT_METHODS.includes(payoutMethod)) {
+        return res.status(400).json({
+          message: 'Invalid payout method',
+        });
+      }
+
+      const payoutAccountName = String(req.body.payoutAccountName || '').trim();
+      const payoutNumber = String(req.body.payoutNumber || '').replace(
+        /\s+/g,
+        ''
+      );
+      const payoutBankName = String(req.body.payoutBankName || '').trim();
+
+      if (payoutMethod === 'none') {
+        updates.payoutMethod = 'none';
+        updates.payoutAccountName = '';
+        updates.payoutNumber = '';
+        updates.payoutBankName = '';
+      } else {
+        if (!payoutAccountName) {
+          return res.status(400).json({
+            message: 'Account holder name is required',
+          });
+        }
+
+        if (payoutMethod === 'bank') {
+          if (!payoutBankName) {
+            return res.status(400).json({
+              message: 'Bank name is required',
+            });
+          }
+
+          if (payoutNumber.length < 8) {
+            return res.status(400).json({
+              message: 'Enter a valid bank account number or IBAN',
+            });
+          }
+        } else if (!/^\d{11}$/.test(payoutNumber)) {
+          return res.status(400).json({
+            message: 'Wallet number must be exactly 11 digits',
+          });
+        }
+
+        updates.payoutMethod = payoutMethod;
+        updates.payoutAccountName = payoutAccountName;
+        updates.payoutNumber = payoutNumber;
+        updates.payoutBankName = payoutMethod === 'bank' ? payoutBankName : '';
+      }
+    }
+
     const user = await User.findByIdAndUpdate(
       req.userId,
-      {
-        name: trimmedName,
-        phoneNumber: trimmedPhoneNumber,
-      },
+      updates,
       {
         new: true,
         runValidators: true,
@@ -236,12 +307,7 @@ const updateProfile = async (req, res) => {
 
     return res.status(200).json({
       message: 'Profile updated successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        phoneNumber: user.phoneNumber,
-        email: user.email,
-      },
+      user: serializePublicUser(user),
     });
   } catch (error) {
     console.error('Profile update error:', error);

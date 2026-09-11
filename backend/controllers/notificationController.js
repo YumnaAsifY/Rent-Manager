@@ -7,16 +7,33 @@ const createNotification = async ({
   message,
   relatedRequest = null,
   relatedAsset = null,
+  relatedRental = null,
+  relatedPayment = null,
+  scheduleKey,
+  audience,
 }) => {
-  return Notification.create({
+  const payload = {
     recipient,
     type,
     title,
     message,
     relatedRequest,
     relatedAsset,
+    relatedRental,
+    relatedPayment,
     isRead: false,
-  });
+    isHidden: false,
+  };
+
+  if (scheduleKey) {
+    payload.scheduleKey = scheduleKey;
+  }
+
+  if (audience) {
+    payload.audience = audience;
+  }
+
+  return Notification.create(payload);
 };
 
 const serializeNotification = (notification) => {
@@ -35,12 +52,24 @@ const serializeNotification = (notification) => {
     relatedAssetId: notification.relatedAsset
       ? notification.relatedAsset.toString()
       : null,
+    relatedRentalId: notification.relatedRental
+      ? notification.relatedRental.toString()
+      : null,
+    relatedPaymentId: notification.relatedPayment
+      ? notification.relatedPayment.toString()
+      : null,
+    audience: notification.audience || null,
     isRead: Boolean(notification.isRead),
     read: Boolean(notification.isRead),
     createdAt: notification.createdAt,
     time: formatRelativeTime(createdAt),
   };
 };
+
+const visibleForRecipient = (userId) => ({
+  recipient: userId,
+  isHidden: { $ne: true },
+});
 
 const formatRelativeTime = (date) => {
   if (!date) {
@@ -69,9 +98,9 @@ const formatRelativeTime = (date) => {
 
 const getMyNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({
-      recipient: req.userId,
-    }).sort({ createdAt: -1 });
+    const notifications = await Notification.find(
+      visibleForRecipient(req.userId)
+    ).sort({ createdAt: -1 });
 
     return res.status(200).json({
       notifications: notifications.map(serializeNotification),
@@ -88,7 +117,7 @@ const getMyNotifications = async (req, res) => {
 const getUnreadNotificationsCount = async (req, res) => {
   try {
     const count = await Notification.countDocuments({
-      recipient: req.userId,
+      ...visibleForRecipient(req.userId),
       isRead: false,
     });
 
@@ -135,7 +164,7 @@ const markNotificationRead = async (req, res) => {
 const markAllNotificationsRead = async (req, res) => {
   try {
     await Notification.updateMany(
-      { recipient: req.userId, isRead: false },
+      { ...visibleForRecipient(req.userId), isRead: false },
       { $set: { isRead: true } }
     );
 
@@ -165,7 +194,8 @@ const deleteNotification = async (req, res) => {
       });
     }
 
-    await notification.deleteOne();
+    notification.isHidden = true;
+    await notification.save();
 
     return res.status(200).json({
       message: 'Notification deleted successfully',
@@ -189,14 +219,18 @@ const deleteNotifications = async (req, res) => {
       });
     }
 
-    const result = await Notification.deleteMany({
-      _id: { $in: ids },
-      recipient: req.userId,
-    });
+    const result = await Notification.updateMany(
+      {
+        _id: { $in: ids },
+        recipient: req.userId,
+        isHidden: { $ne: true },
+      },
+      { $set: { isHidden: true } }
+    );
 
     return res.status(200).json({
       message: 'Notifications deleted successfully',
-      deletedCount: result.deletedCount,
+      deletedCount: result.modifiedCount,
     });
   } catch (error) {
     console.error('Delete notifications error:', error);

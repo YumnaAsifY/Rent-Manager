@@ -84,22 +84,57 @@ export type CreateAssetInput = {
   description?: string;
   monthlyRent?: string;
   imageUri: string;
+  imageMimeType?: string | null;
+  imageFileName?: string | null;
 };
 
-async function buildImagePart(imageUri: string) {
-  const fileName =
-    imageUri.split('/').pop()?.split('?')[0] || `asset-${Date.now()}.jpg`;
-  const extension = fileName.includes('.')
-    ? fileName.split('.').pop()?.toLowerCase()
-    : 'jpg';
-  const mimeType =
-    extension === 'png'
-      ? 'image/png'
-      : extension === 'webp'
-        ? 'image/webp'
-        : extension === 'gif'
-          ? 'image/gif'
-          : 'image/jpeg';
+const getImageFileName = (imageUri: string, imageFileName?: string | null) => {
+  const fromPicker = imageFileName?.split('/').pop()?.split('?')[0];
+  if (fromPicker && fromPicker.includes('.')) {
+    return fromPicker;
+  }
+
+  const fromUri = imageUri.split('/').pop()?.split('?')[0];
+  if (fromUri && fromUri.includes('.')) {
+    return fromUri;
+  }
+
+  return `asset-${Date.now()}.jpg`;
+};
+
+const getImageMimeType = (fileName: string, imageMimeType?: string | null) => {
+  if (imageMimeType && imageMimeType.startsWith('image/')) {
+    return imageMimeType === 'image/jpg' ? 'image/jpeg' : imageMimeType;
+  }
+
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  if (extension === 'png') return 'image/png';
+  if (extension === 'webp') return 'image/webp';
+  if (extension === 'gif') return 'image/gif';
+  return 'image/jpeg';
+};
+
+const normalizeNativeImageUri = (imageUri: string) => {
+  if (
+    Platform.OS === 'android' &&
+    !imageUri.startsWith('file://') &&
+    !imageUri.startsWith('content://') &&
+    !imageUri.startsWith('http://') &&
+    !imageUri.startsWith('https://')
+  ) {
+    return `file://${imageUri}`;
+  }
+
+  return imageUri;
+};
+
+async function buildImagePart(
+  imageUri: string,
+  imageMimeType?: string | null,
+  imageFileName?: string | null
+) {
+  const fileName = getImageFileName(imageUri, imageFileName);
+  const mimeType = getImageMimeType(fileName, imageMimeType);
 
   if (Platform.OS === 'web') {
     const response = await fetch(imageUri);
@@ -108,11 +143,48 @@ async function buildImagePart(imageUri: string) {
   }
 
   return {
-    uri: imageUri,
+    uri: normalizeNativeImageUri(imageUri),
     name: fileName,
     type: mimeType,
-  } as unknown as Blob;
+  };
 }
+
+const postAssetFormData = (
+  url: string,
+  token: string,
+  formData: FormData
+): Promise<{ ok: boolean; status: number; responseText: string }> => {
+  if (Platform.OS === 'web') {
+    return fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    }).then(async (response) => ({
+      ok: response.ok,
+      status: response.status,
+      responseText: await response.text(),
+    }));
+  }
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.timeout = 60000;
+    xhr.onload = () => {
+      resolve({
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        responseText: xhr.responseText || '',
+      });
+    };
+    xhr.onerror = () => reject(new Error('network'));
+    xhr.ontimeout = () => reject(new Error('network'));
+    xhr.send(formData);
+  });
+};
 
 export async function createAsset(
   token: string,
@@ -131,28 +203,41 @@ export async function createAsset(
     formData.append('monthlyRent', input.monthlyRent.trim());
   }
 
-  formData.append('image', await buildImagePart(input.imageUri));
+  formData.append(
+    'image',
+    (await buildImagePart(
+      input.imageUri,
+      input.imageMimeType,
+      input.imageFileName
+    )) as any
+  );
 
-  const response = await fetch(`${API_BASE_URL}/api/assets`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
+  let uploadResult: { ok: boolean; status: number; responseText: string };
 
-  const responseText = await response.text();
+  try {
+    uploadResult = await postAssetFormData(
+      `${API_BASE_URL}/api/assets`,
+      token,
+      formData
+    );
+  } catch (uploadError) {
+    throw new ApiError(
+      'Phone could not reach the server. Keep the same Wi-Fi as your laptop and make sure the backend is running.',
+      0
+    );
+  }
+
   let data: unknown = {};
 
-  if (responseText) {
+  if (uploadResult.responseText) {
     try {
-      data = JSON.parse(responseText);
+      data = JSON.parse(uploadResult.responseText);
     } catch {
       data = {};
     }
   }
 
-  if (!response.ok) {
+  if (!uploadResult.ok) {
     const message =
       typeof data === 'object' &&
       data !== null &&
@@ -161,7 +246,7 @@ export async function createAsset(
         ? data.message
         : 'Unable to create asset';
 
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, uploadResult.status);
   }
 
   return (data as { asset: Asset }).asset;

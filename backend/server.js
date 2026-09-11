@@ -11,27 +11,21 @@ const assetRoutes = require('./routes/assetRoutes');
 const rentalRoutes = require('./routes/rentalRoutes');
 const rentalRequestRoutes = require('./routes/rentalRequestRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const adminUserRoutes = require('./routes/adminUserRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 const { uploadsDir } = require('./middleware/uploadMiddleware');
+const User = require('./models/User');
+const {
+  startPaymentReminderScheduler,
+} = require('./jobs/paymentReminders');
 
 const app = express();
 
 const PORT = 5000;
 
-// Allow Expo Web on localhost and the laptop LAN IP (phone / Expo Go).
-const isLocalDevelopmentOrigin = (origin) => {
-  return /^http:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+):\d+$/.test(
-    origin
-  );
-};
-
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || isLocalDevelopmentOrigin(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error('Origin is not allowed by CORS'));
-  },
+  origin: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -46,6 +40,9 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/rentals', rentalRoutes);
 app.use('/api/rental-requests', rentalRequestRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/users', adminUserRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.get('/', (req, res) => {
   res.send('Rent Manager Backend is running!');
@@ -53,11 +50,29 @@ app.get('/', (req, res) => {
 
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB connected successfully!');
+
+    const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    if (adminEmail) {
+      const result = await User.updateOne(
+        { email: adminEmail },
+        { $set: { role: 'admin', isActive: true } }
+      );
+      if (result.matchedCount === 0) {
+        console.log(
+          `ADMIN_EMAIL ${adminEmail} is not registered yet. Register that Gmail, then restart the server.`
+        );
+      } else {
+        console.log(`Admin role assigned to ${adminEmail}`);
+      }
+    } else {
+      console.log('ADMIN_EMAIL is not set in .env — skip admin seed');
+    }
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on http://localhost:${PORT}`);
+      startPaymentReminderScheduler();
     });
   })
   .catch((error) => {

@@ -23,13 +23,21 @@ export default function LoginScreen() {
     }
     setIsSubmitting(true);
     try {
-      await login(email.trim(), password);
+      const loggedInUser = await login(email.trim().toLowerCase(), password);
       setPassword('');
       Alert.alert('Success', 'Login successful!');
-      router.replace('/home');
+      router.replace(
+        loggedInUser.role === 'admin' ? '/admin' : '/home'
+      );
     } catch (error) {
-      if (error instanceof ApiError) {
-        setLoginError('Incorrect email or password.');
+      if (error instanceof ApiError && error.status === 0) {
+        Alert.alert('Login Failed', error.message);
+      } else if (error instanceof ApiError) {
+        setLoginError(
+          error.status === 403
+            ? error.message || 'This account has been deactivated.'
+            : 'Incorrect email or password.'
+        );
       } else {
         Alert.alert('Login Failed', 'Unable to connect to server');
       }

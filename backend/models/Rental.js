@@ -55,6 +55,11 @@ const rentalSchema = new mongoose.Schema(
       default: true,
       index: true,
     },
+
+    tenantDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
