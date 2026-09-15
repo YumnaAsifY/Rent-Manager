@@ -82,7 +82,7 @@
 //               onPress={pickImage}
 //               activeOpacity={0.8}
 //             >
-//               <Ionicons name="camera" size={20} color="#1a237e" />
+//               <Ionicons name="camera" size={20} color="#323a8f" />
 //             </TouchableOpacity>
 
 //             <View style={styles.profileInfo}>
@@ -101,7 +101,7 @@
 //           >
 //             <View style={styles.optionLeft}>
 //               <View style={[styles.optionIcon, { backgroundColor: '#EEF4FF' }]}>
-//                 <Ionicons name="create-outline" size={20} color="#1a237e" />
+//                 <Ionicons name="create-outline" size={20} color="#323a8f" />
 //               </View>
 //               <Text style={styles.optionText}>Edit Profile</Text>
 //             </View>
@@ -180,7 +180,7 @@
 //   headerTitle: {
 //     fontSize: 20,
 //     fontWeight: '600',
-//     color: '#1a237e',
+//     color: '#323a8f',
 //   },
 //   scrollView: {
 //     flex: 1,
@@ -217,7 +217,7 @@
 //     width: 70,
 //     height: 70,
 //     borderRadius: 35,
-//     backgroundColor: '#1a237e',
+//     backgroundColor: '#323a8f',
 //     justifyContent: 'center',
 //     alignItems: 'center',
 //   },
@@ -234,7 +234,7 @@
 //     justifyContent: 'center',
 //     alignItems: 'center',
 //     borderWidth: 1,
-//     borderColor: '#1a237e',
+//     borderColor: '#323a8f',
 //     marginLeft: -8,
 //   },
 //   profileInfo: {
@@ -409,7 +409,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
       
       <ScreenHeader title="Profile" variant="dark" showBack={false} />
 
@@ -475,7 +475,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.optionLeft}>
               <View style={[styles.optionIcon, { backgroundColor: '#EEF4FF' }]}>
-                <Ionicons name="create-outline" size={20} color="#1a237e" />
+                <Ionicons name="create-outline" size={20} color="#323a8f" />
               </View>
               <Text style={styles.optionText}>Edit Profile</Text>
             </View>
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -654,12 +654,12 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   logoutButton: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#1A237E',
+    shadowColor: '#323a8f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

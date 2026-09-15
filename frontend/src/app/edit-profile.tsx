@@ -6,7 +6,6 @@ import {
   StyleSheet,
   StatusBar,
   TextInput,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 
@@ -17,6 +16,7 @@ import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
 
 import { PayoutMethod, useAuth } from '@/context/AuthContext';
+import { showAlert } from '@/utils/showAlert';
 
 const PAYOUT_OPTIONS: { key: PayoutMethod; label: string }[] = [
   { key: 'none', label: 'None' },
@@ -77,7 +77,7 @@ export default function EditProfileScreen() {
     const trimmedPhone = phone.trim();
 
     if (!trimmedName) {
-      Alert.alert(
+      showAlert(
         'Error',
         'Please enter your full name.'
       );
@@ -85,7 +85,7 @@ export default function EditProfileScreen() {
     }
 
     if (!trimmedPhone) {
-      Alert.alert(
+      showAlert(
         'Error',
         'Please enter your phone number.'
       );
@@ -93,7 +93,7 @@ export default function EditProfileScreen() {
     }
 
     if (trimmedPhone.length !== 11) {
-      Alert.alert(
+      showAlert(
         'Error',
         'Phone number must be exactly 11 digits.'
       );
@@ -102,22 +102,22 @@ export default function EditProfileScreen() {
 
     if (payoutMethod !== 'none') {
       if (!payoutAccountName.trim()) {
-        Alert.alert('Error', 'Please enter the account holder name.');
+        showAlert('Error', 'Please enter the account holder name.');
         return;
       }
 
       if (payoutMethod === 'bank') {
         if (!payoutBankName.trim()) {
-          Alert.alert('Error', 'Please enter the bank name.');
+          showAlert('Error', 'Please enter the bank name.');
           return;
         }
 
         if (payoutNumber.replace(/\s+/g, '').length < 8) {
-          Alert.alert('Error', 'Enter a valid bank account number or IBAN.');
+          showAlert('Error', 'Enter a valid bank account number or IBAN.');
           return;
         }
       } else if (payoutNumber.length !== 11) {
-        Alert.alert('Error', 'Wallet number must be exactly 11 digits.');
+        showAlert('Error', 'Wallet number must be exactly 11 digits.');
         return;
       }
     }
@@ -136,25 +136,16 @@ export default function EditProfileScreen() {
         }
       );
 
-      Alert.alert(
-        'Success',
-        'Profile updated successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              router.back();
-            },
-          },
-        ]
-      );
+      showAlert('Successfully changed', undefined, () => {
+        router.back();
+      });
     } catch (error: any) {
       console.error(
         'Update profile error:',
         error
       );
 
-      Alert.alert(
+      showAlert(
         'Error',
         error?.message ||
           'Unable to update profile. Please try again.'
@@ -168,7 +159,7 @@ export default function EditProfileScreen() {
     <View style={styles.container}>
       <StatusBar
         barStyle="light-content"
-        backgroundColor="#1A237E"
+        backgroundColor="#323a8f"
       />
 
       <ScreenHeader
@@ -395,8 +386,8 @@ const styles = StyleSheet.create({
   },
 
   methodChipActive: {
-    backgroundColor: '#1A237E',
-    borderColor: '#1A237E',
+    backgroundColor: '#323a8f',
+    borderColor: '#323a8f',
   },
 
   methodChipText: {
@@ -428,12 +419,12 @@ const styles = StyleSheet.create({
 
   saveButton: {
     height: 54,
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#1A237E',
+    shadowColor: '#323a8f',
     shadowOffset: {
       width: 0,
       height: 4,

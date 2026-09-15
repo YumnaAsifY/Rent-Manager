@@ -144,7 +144,7 @@ export default function RentalDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a237e" />
+        <ActivityIndicator size="large" color="#323a8f" />
         <Text style={styles.loadingText}>Loading details...</Text>
       </View>
     );
@@ -153,7 +153,7 @@ export default function RentalDetailScreen() {
   if (!rental) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
         <ScreenHeader title="Rental Detail" variant="dark" />
         <View style={styles.notFoundContainer}>
           <Ionicons name="alert-circle-outline" size={60} color="#CBD5E1" />
@@ -169,7 +169,7 @@ export default function RentalDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
 
       <ScreenHeader title="Rental Detail" variant="dark" />
 
@@ -225,7 +225,7 @@ export default function RentalDetailScreen() {
             <View style={styles.dateRow}>
               <View style={styles.dateItem}>
                 <View style={styles.dateIconRow}>
-                  <Ionicons name="calendar-outline" size={16} color="#1a237e" />
+                  <Ionicons name="calendar-outline" size={16} color="#323a8f" />
                   <Text style={styles.dateLabel}>Start Date</Text>
                 </View>
                 <Text style={styles.dateValue}>{rental.startDate || 'N/A'}</Text>
@@ -233,7 +233,7 @@ export default function RentalDetailScreen() {
 
               <View style={styles.dateItem}>
                 <View style={styles.dateIconRow}>
-                  <Ionicons name="calendar-outline" size={16} color="#1a237e" />
+                  <Ionicons name="calendar-outline" size={16} color="#323a8f" />
                   <Text style={styles.dateLabel}>End Date</Text>
                 </View>
                 <Text style={styles.dateValue}>{rental.endDate || 'N/A'}</Text>
@@ -265,26 +265,38 @@ export default function RentalDetailScreen() {
             </View>
           ) : null}
 
-          {rental.status === 'Active' &&
-          rental.monthlyRent != null &&
-          rental.monthlyRent > 0 ? (
+          {rental.monthlyRent != null && rental.monthlyRent > 0 ? (
             <>
               <View style={styles.divider} />
-              <TouchableOpacity
-                style={[styles.payButton, paying && styles.payButtonDisabled]}
-                disabled={paying}
-                onPress={() => void handlePayRent()}
-                activeOpacity={0.85}
-              >
-                {paying ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="card-outline" size={18} color="#ffffff" />
-                    <Text style={styles.payButtonText}>Pay with Safepay</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              {rental.canPayRent ? (
+                <>
+                  {rental.isOverdue ? (
+                    <Text style={styles.overdueText}>
+                      Your rent is overdue — pay now via Safepay.
+                    </Text>
+                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.payButton, paying && styles.payButtonDisabled]}
+                    disabled={paying}
+                    onPress={() => void handlePayRent()}
+                    activeOpacity={0.85}
+                  >
+                    {paying ? (
+                      <ActivityIndicator color="#ffffff" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="card-outline" size={18} color="#ffffff" />
+                        <Text style={styles.payButtonText}>Pay with Safepay</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </>
+              ) : rental.currentCyclePaid ? (
+                <View style={styles.paidBanner}>
+                  <Ionicons name="checkmark-circle" size={20} color="#15803D" />
+                  <Text style={styles.paidBannerText}>Paid for this month</Text>
+                </View>
+              ) : null}
             </>
           ) : null}
         </View>
@@ -390,7 +402,7 @@ const styles = StyleSheet.create({
   detailRent: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
   },
   divider: {
     height: 1,
@@ -426,7 +438,7 @@ const styles = StyleSheet.create({
   ownerPhone: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a237e',
+    color: '#323a8f',
     textDecorationLine: 'underline',
   },
   leaseDatesContainer: {
@@ -471,8 +483,29 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     paddingLeft: 20,
   },
+  overdueText: {
+    marginBottom: 12,
+    fontSize: 13,
+    color: '#B45309',
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  paidBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  paidBannerText: {
+    color: '#15803D',
+    fontSize: 15,
+    fontWeight: '700',
+  },
   payButton: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     minHeight: 48,
     flexDirection: 'row',

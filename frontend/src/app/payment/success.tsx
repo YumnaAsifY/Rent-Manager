@@ -159,13 +159,13 @@ export default function PaymentSuccessScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
       <ScreenHeader title="Payment" variant="dark" fallbackHref="/payment" />
 
       <View style={styles.body}>
         {loading ? (
           <>
-            <ActivityIndicator size="large" color="#1A237E" />
+            <ActivityIndicator size="large" color="#323a8f" />
             <Text style={styles.loadingText}>Confirming with Safepay...</Text>
           </>
         ) : (
@@ -205,7 +205,12 @@ export default function PaymentSuccessScreen() {
 
             <TouchableOpacity
               style={styles.button}
-              onPress={() => router.replace('/payment' as any)}
+              onPress={() =>
+                router.replace({
+                  pathname: '/payment',
+                  params: { section: 'history' },
+                } as any)
+              }
               activeOpacity={0.85}
             >
               <Text style={styles.buttonText}>Back to Payments</Text>
@@ -239,7 +244,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1A237E',
+    color: '#323a8f',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -258,7 +263,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 16,
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 14,
@@ -275,6 +280,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   secondaryButtonText: {
-    color: '#1A237E',
+    color: '#323a8f',
   },
 });

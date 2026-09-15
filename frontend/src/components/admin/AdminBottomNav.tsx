@@ -39,7 +39,7 @@ export default function AdminBottomNav() {
                   : (`${tab.icon}-outline` as any)
               }
               size={24}
-              color={isActive ? '#1A237E' : '#9E9E9E'}
+              color={isActive ? '#323a8f' : '#9E9E9E'}
             />
             <Text style={[styles.label, isActive && styles.labelActive]}>
               {tab.name}
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     color: '#9E9E9E',
   },
   labelActive: {
-    color: '#1A237E',
+    color: '#323a8f',
     fontWeight: '700',
   },
 });

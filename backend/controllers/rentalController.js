@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Rental = require('../models/Rental');
+const { getRentalBillingState, getOwnerRentPaymentStatus } = require('../utils/billingCycle');
 
 const formatDate = (value) => {
   if (!value) {
@@ -103,6 +104,19 @@ const populateRentalQuery = (query) =>
     .populate('asset', 'name type location description image monthlyRent')
     .populate('owner', 'name phoneNumber');
 
+const enrichRental = async (rental) => {
+  const billing = await getRentalBillingState(rental);
+  const paymentStatus = await getOwnerRentPaymentStatus(rental);
+  return {
+    ...serializeRental(rental),
+    canPayRent: billing.canPayRent,
+    currentCyclePaid: billing.currentCyclePaid,
+    isOverdue: billing.isOverdue,
+    rentPaymentStatus: paymentStatus.rentPaymentStatus,
+    rentPaymentLabel: paymentStatus.rentPaymentLabel,
+  };
+};
+
 const getMyRentals = async (req, res) => {
   try {
     const rentals = await populateRentalQuery(
@@ -112,8 +126,10 @@ const getMyRentals = async (req, res) => {
       }).sort({ createdAt: -1 })
     );
 
+    const enriched = await Promise.all(rentals.map((rental) => enrichRental(rental)));
+
     return res.status(200).json({
-      rentals: rentals.map(serializeRental),
+      rentals: enriched,
     });
   } catch (error) {
     console.error('Get my rentals error:', error);
@@ -164,7 +180,7 @@ const getRentalById = async (req, res) => {
     }
 
     return res.status(200).json({
-      rental: serializeRental(rental),
+      rental: await enrichRental(rental),
     });
   } catch (error) {
     console.error('Get rental by id error:', error);

@@ -33,7 +33,7 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a237e" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
       
       <View style={styles.content}>
         <Image

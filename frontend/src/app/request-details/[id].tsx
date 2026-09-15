@@ -240,7 +240,7 @@ export default function RequestDetailsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a237e" />
+        <ActivityIndicator size="large" color="#323a8f" />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -249,7 +249,7 @@ export default function RequestDetailsScreen() {
   if (!request) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
         <ScreenHeader title="Request Details" variant="dark" />
         <View style={styles.notFoundContainer}>
           <Ionicons name="alert-circle-outline" size={60} color="#CBD5E1" />
@@ -268,7 +268,7 @@ export default function RequestDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
 
       <ScreenHeader title="Request Details" variant="dark" />
 
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
   detailRent: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A237E',
+    color: '#323a8f',
   },
   divider: {
     height: 1,
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
   phoneLink: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A237E',
+    color: '#323a8f',
     textDecorationLine: 'underline',
   },
   actionContainer: {
@@ -656,7 +656,7 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     flex: 1,
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
   },
   linkButton: {
     marginTop: 12,
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',

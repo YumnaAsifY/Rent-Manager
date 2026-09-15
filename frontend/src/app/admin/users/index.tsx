@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#1A237E',
+    color: '#323a8f',
     outlineStyle: 'none' as any,
   },
   scroll: {
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A237E',
+    color: '#323a8f',
   },
   emptyText: {
     marginTop: 6,
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A237E',
+    color: '#323a8f',
   },
   cardBody: {
     flex: 1,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A237E',
+    color: '#323a8f',
   },
   badge: {
     borderRadius: 20,

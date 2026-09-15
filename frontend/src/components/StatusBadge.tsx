@@ -11,7 +11,7 @@ export default function StatusBadge({ text, variant = 'pending' }: StatusBadgePr
       case 'pending':
         return '#ff6f00';
       case 'active':
-        return '#1a237e';
+        return '#323a8f';
       case 'completed':
         return '#2e7d32';
       default:

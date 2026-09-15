@@ -66,7 +66,9 @@ export default function BottomNavigation() {
   return (
     <View style={styles.container}>
       {navigationTabs.map((tab) => {
-        const isActive = pathname === tab.path;
+        const isActive =
+          pathname === tab.path ||
+          (tab.path === '/payment' && pathname.startsWith('/payment'));
         const showBadge = tab.name === 'Requests' && pendingRequestsCount > 0;
 
         return (
@@ -80,7 +82,7 @@ export default function BottomNavigation() {
               <Ionicons
                 name={isActive ? (tab.icon as any) : (`${tab.icon}-outline` as any)}
                 size={24}
-                color={isActive ? '#1a237e' : '#999999'}
+                color={isActive ? '#323a8f' : '#999999'}
               />
               {showBadge && (
                 <View style={styles.badge}>
@@ -144,7 +146,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tabLabelActive: {
-    color: '#1a237e',
+    color: '#323a8f',
     fontWeight: '600',
   },
 });

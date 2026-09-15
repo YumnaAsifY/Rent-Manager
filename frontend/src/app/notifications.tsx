@@ -12,7 +12,7 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
 
@@ -34,6 +34,10 @@ const isWeb = width > 768;
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string | string[] }>();
+  const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
+  const activeTab: 'requests' | 'payments' =
+    tabParam === 'payments' ? 'payments' : 'requests';
   const { token } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +47,14 @@ export default function NotificationsScreen() {
   const [menuNotification, setMenuNotification] =
     useState<AppNotification | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const setActiveTab = useCallback(
+    (tab: 'requests' | 'payments') => {
+      router.setParams({ tab });
+      setSelectedIds([]);
+    },
+    [router]
+  );
 
   const loadNotifications = useCallback(async () => {
     if (!token) {
@@ -80,8 +92,22 @@ export default function NotificationsScreen() {
   );
 
   const unreadCount = notifications.filter((item) => !item.isRead).length;
+
+  const isPaymentNotification = (notification: AppNotification) =>
+    notification.type.startsWith('payment_');
+
+  const requestNotifications = notifications.filter(
+    (notification) => !isPaymentNotification(notification)
+  );
+  const paymentNotifications = notifications.filter(isPaymentNotification);
+  const visibleNotifications =
+    activeTab === 'payments' ? paymentNotifications : requestNotifications;
+  const hasUnreadRequests = requestNotifications.some((item) => !item.isRead);
+  const hasUnreadPayments = paymentNotifications.some((item) => !item.isRead);
+
   const allSelected =
-    notifications.length > 0 && selectedIds.length === notifications.length;
+    visibleNotifications.length > 0 &&
+    selectedIds.length === visibleNotifications.length;
 
   const confirmAction = (
     title: string,
@@ -123,7 +149,7 @@ export default function NotificationsScreen() {
       setSelectedIds([]);
       return;
     }
-    setSelectedIds(notifications.map((item) => item.id));
+    setSelectedIds(visibleNotifications.map((item) => item.id));
   };
 
   const handleNotificationPress = async (notification: AppNotification) => {
@@ -160,7 +186,26 @@ export default function NotificationsScreen() {
     }
 
     if (notification.type.startsWith('payment_')) {
+      if (
+        notification.type === 'payment_received' ||
+        notification.type === 'payment_settled'
+      ) {
+        router.push({
+          pathname: '/payment',
+          params: { section: 'history' },
+        } as any);
+        return;
+      }
+
+      router.setParams({ tab: 'payments' });
+
       if (notification.audience === 'owner') {
+        if (notification.relatedAssetId) {
+          router.push(
+            `/property-details/${notification.relatedAssetId}` as any
+          );
+          return;
+        }
         router.push('/properties' as any);
         return;
       }
@@ -170,29 +215,6 @@ export default function NotificationsScreen() {
       }
       router.push('/payment' as any);
     }
-  };
-
-  const isPaymentNotification = (notification: AppNotification) =>
-    notification.type.startsWith('payment_');
-
-  const requestNotifications = notifications.filter(
-    (notification) => !isPaymentNotification(notification)
-  );
-  const paymentNotifications = notifications.filter(isPaymentNotification);
-
-  const renderSection = (title: string, items: AppNotification[]) => {
-    if (items.length === 0) {
-      return null;
-    }
-
-    return (
-      <>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{title}</Text>
-        </View>
-        {items.map((notification) => renderNotificationCard(notification))}
-      </>
-    );
   };
 
   const handleMarkAllRead = async () => {
@@ -307,7 +329,7 @@ export default function NotificationsScreen() {
             <Ionicons
               name={isSelected ? 'checkbox' : 'square-outline'}
               size={22}
-              color={isSelected ? '#1A237E' : '#94A3B8'}
+              color={isSelected ? '#323a8f' : '#94A3B8'}
             />
           </View>
         ) : null}
@@ -345,7 +367,7 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a237e" />
+        <ActivityIndicator size="large" color="#323a8f" />
         <Text style={styles.loadingText}>Loading notifications...</Text>
       </View>
     );
@@ -356,7 +378,7 @@ export default function NotificationsScreen() {
       <TouchableOpacity onPress={exitSelectionMode} style={styles.headerAction}>
         <Text style={styles.headerActionText}>Cancel</Text>
       </TouchableOpacity>
-      {notifications.length > 0 ? (
+      {visibleNotifications.length > 0 ? (
         <TouchableOpacity onPress={handleSelectAll} style={styles.headerAction}>
           <Text style={styles.headerActionText}>
             {allSelected ? 'Clear' : 'Select All'}
@@ -389,7 +411,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
 
       <ScreenHeader
         title="Notifications"
@@ -416,6 +438,63 @@ export default function NotificationsScreen() {
         </View>
       ) : null}
 
+      {!errorMessage && notifications.length > 0 ? (
+        <View style={styles.filterSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {(
+              [
+                {
+                  id: 'requests' as const,
+                  label: 'Rental Requests',
+                  hasUnread: hasUnreadRequests,
+                },
+                {
+                  id: 'payments' as const,
+                  label: 'Payments',
+                  hasUnread: hasUnreadPayments,
+                },
+              ]
+            ).map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[
+                    styles.filterChip,
+                    isActive && styles.filterChipActive,
+                  ]}
+                  onPress={() => setActiveTab(tab.id)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.chipInner}>
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        isActive && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {tab.label}
+                    </Text>
+                    {tab.hasUnread ? (
+                      <View
+                        style={[
+                          styles.chipDot,
+                          isActive && styles.chipDotActive,
+                        ]}
+                      />
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -431,17 +510,22 @@ export default function NotificationsScreen() {
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : notifications.length === 0 ? (
+        ) : visibleNotifications.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-off-outline" size={60} color="#CBD5E1" />
-            <Text style={styles.emptyText}>No notifications</Text>
+            <Text style={styles.emptyText}>
+              {notifications.length === 0
+                ? 'No notifications'
+                : activeTab === 'payments'
+                  ? 'No payment notifications'
+                  : 'No rental request notifications'}
+            </Text>
             <Text style={styles.emptySubText}>You're all caught up!</Text>
           </View>
         ) : (
-          <>
-            {renderSection('Rental Requests', requestNotifications)}
-            {renderSection('Payments', paymentNotifications)}
-          </>
+          visibleNotifications.map((notification) =>
+            renderNotificationCard(notification)
+          )
         )}
       </ScrollView>
 
@@ -534,7 +618,7 @@ const styles = StyleSheet.create({
   selectionCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A237E',
+    color: '#323a8f',
   },
   deleteSelectedButton: {
     backgroundColor: '#EF4444',
@@ -551,6 +635,53 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.7,
+  },
+  filterSection: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8EEF7',
+    paddingTop: 14,
+    paddingBottom: 14,
+    paddingLeft: 20,
+  },
+  filterRow: {
+    paddingRight: 20,
+    gap: 10,
+    alignItems: 'center',
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 22,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#D6DEFF',
+  },
+  filterChipActive: {
+    backgroundColor: '#323a8f',
+    borderColor: '#323a8f',
+  },
+  chipInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3949AB',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  chipDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#323a8f',
+  },
+  chipDotActive: {
+    backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
@@ -590,11 +721,11 @@ const styles = StyleSheet.create({
   },
   cardUnread: {
     borderLeftWidth: 4,
-    borderLeftColor: '#1a237e',
+    borderLeftColor: '#323a8f',
     backgroundColor: '#FAFBFF',
   },
   cardSelected: {
-    borderColor: '#1A237E',
+    borderColor: '#323a8f',
     backgroundColor: '#F5F7FF',
   },
   checkboxWrap: {
@@ -617,13 +748,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationTitleUnread: {
-    color: '#1a237e',
+    color: '#323a8f',
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     marginLeft: 8,
   },
   menuButton: {
@@ -663,7 +794,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryButton: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,

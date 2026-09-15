@@ -103,7 +103,7 @@ export default function ExploreAssetsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a237e" />
+        <ActivityIndicator size="large" color="#323a8f" />
         <Text style={styles.loadingText}>Loading assets...</Text>
       </View>
     );
@@ -111,7 +111,7 @@ export default function ExploreAssetsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
 
       <ScreenHeader title="Explore Assets" variant="dark" />
 
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 14,
     paddingLeft: 20,
-    shadowColor: '#1A237E',
+    shadowColor: '#323a8f',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1A237E',
+    color: '#323a8f',
     marginBottom: 10,
     letterSpacing: 0.2,
   },
@@ -321,8 +321,8 @@ const styles = StyleSheet.create({
     borderColor: '#D6DEFF',
   },
   filterChipActive: {
-    backgroundColor: '#1A237E',
-    borderColor: '#1A237E',
+    backgroundColor: '#323a8f',
+    borderColor: '#323a8f',
   },
   filterChipText: {
     fontSize: 13,
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
   rentText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A237E',
+    color: '#323a8f',
     marginBottom: 4,
   },
   emptyContainer: {
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryButton: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,

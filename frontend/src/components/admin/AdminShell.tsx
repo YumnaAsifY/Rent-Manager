@@ -132,7 +132,7 @@ export default function AdminShell({
           accessibilityRole="button"
           accessibilityLabel="Logout"
         >
-          <Ionicons name="log-out-outline" size={22} color="#1A237E" />
+          <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 250,
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     paddingHorizontal: 16,
     paddingTop: 22,
     paddingBottom: 24,
@@ -207,14 +207,14 @@ const styles = StyleSheet.create({
   },
   desktopHeader: {
     minHeight: 72,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#323a8f',
     borderBottomWidth: 1,
-    borderBottomColor: '#E8EAF6',
+    borderBottomColor: '#2c337d',
     justifyContent: 'center',
     paddingHorizontal: 28,
   },
   desktopTitle: {
-    color: '#1A237E',
+    color: '#FFFFFF',
     fontSize: 22,
     fontWeight: '700',
   },
@@ -227,9 +227,9 @@ const styles = StyleSheet.create({
   },
   mobileHeader: {
     minHeight: 56,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#323a8f',
     borderBottomWidth: 1,
-    borderBottomColor: '#E8EAF6',
+    borderBottomColor: '#2c337d',
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 8 : 0,
   },
   mobileTitle: {
-    color: '#1A237E',
+    color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '700',
   },
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#E8EAF6',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },

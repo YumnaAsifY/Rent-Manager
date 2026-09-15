@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const Payment = require('../models/Payment');
 const Rental = require('../models/Rental');
+const { createNotification } = require('./notificationController');
+const { PAID_STATUSES } = require('../utils/billingCycle');
 const { formatPayoutForAdmin } = require('../utils/payout');
 const {
   createSafepayCheckout,
@@ -98,6 +100,103 @@ const populateAdminPaymentQuery = (query) =>
       'name email phoneNumber payoutMethod payoutAccountName payoutNumber payoutBankName'
     )
     .populate('asset', 'name');
+
+const populateHistoryPaymentQuery = (query) =>
+  query
+    .populate('tenant', 'name')
+    .populate('owner', 'name')
+    .populate('asset', 'name location');
+
+const formatHistoryDate = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  return new Date(value).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const formatCurrency = (amount) =>
+  `Rs. ${Number(amount || 0).toLocaleString('en-PK')}`;
+
+const serializeHistoryPayment = (payment, userId) => {
+  const tenant =
+    payment.tenant && typeof payment.tenant === 'object' ? payment.tenant : null;
+  const owner =
+    payment.owner && typeof payment.owner === 'object' ? payment.owner : null;
+  const asset =
+    payment.asset && typeof payment.asset === 'object' ? payment.asset : null;
+  const userIdStr = userId.toString();
+  const viewerRole =
+    payment.tenant?.toString?.() === userIdStr ? 'tenant' : 'owner';
+
+  return {
+    id: payment._id.toString(),
+    assetName: asset?.name || 'Unknown asset',
+    assetLocation: asset?.location || null,
+    tenantName: tenant?.name || 'Unknown tenant',
+    ownerName: owner?.name || 'Unknown owner',
+    totalAmount: payment.totalAmount,
+    ownerShareAmount: payment.ownerShareAmount,
+    status: payment.status,
+    paidAt: payment.paidAt,
+    settledAt: payment.settledAt,
+    paidDate: formatHistoryDate(payment.paidAt || payment.createdAt),
+    settledDate: formatHistoryDate(payment.settledAt),
+    viewerRole,
+    rentalId: payment.rental?.toString?.() || String(payment.rental),
+    assetId: payment.asset?.toString?.() || String(payment.asset),
+  };
+};
+
+const notifyOwnerPaymentReceived = async (payment) => {
+  const populated = await populateHistoryPaymentQuery(
+    Payment.findById(payment._id)
+  );
+  if (!populated) {
+    return;
+  }
+
+  const tenantName = populated.tenant?.name || 'The tenant';
+  const assetName = populated.asset?.name || 'your property';
+
+  await createNotification({
+    recipient: populated.owner._id || populated.owner,
+    type: 'payment_received',
+    title: 'Payment received',
+    message: `${tenantName} paid rent for ${assetName}. Admin will settle your share.`,
+    relatedAsset: populated.asset._id || populated.asset,
+    relatedRental: populated.rental,
+    relatedPayment: populated._id,
+    audience: 'owner',
+  });
+};
+
+const notifyOwnerPaymentSettled = async (payment) => {
+  const populated = await populateHistoryPaymentQuery(
+    Payment.findById(payment._id)
+  );
+  if (!populated) {
+    return;
+  }
+
+  const assetName = populated.asset?.name || 'your property';
+  const share = formatCurrency(populated.ownerShareAmount);
+
+  await createNotification({
+    recipient: populated.owner._id || populated.owner,
+    type: 'payment_settled',
+    title: 'Share settled',
+    message: `Your share (${share}) for ${assetName} has been settled by admin.`,
+    relatedAsset: populated.asset._id || populated.asset,
+    relatedRental: populated.rental,
+    relatedPayment: populated._id,
+    audience: 'owner',
+  });
+};
 
 /**
  * POST /api/payments/create-session
@@ -281,9 +380,20 @@ const verifyPayment = async (req, res) => {
     }
 
     if (safepayResult.isPaid) {
+      const wasAlreadyPaid =
+        payment.status === 'pending_settlement' || payment.status === 'settled';
+
       payment.status = 'pending_settlement';
       payment.paidAt = payment.paidAt || new Date();
       await payment.save();
+
+      if (!wasAlreadyPaid) {
+        try {
+          await notifyOwnerPaymentReceived(payment);
+        } catch (notifyError) {
+          console.error('Payment received notification error:', notifyError);
+        }
+      }
 
       return res.status(200).json({
         verified: true,
@@ -406,6 +516,12 @@ const settlePayment = async (req, res) => {
     payment.settledAt = new Date();
     await payment.save();
 
+    try {
+      await notifyOwnerPaymentSettled(payment);
+    } catch (notifyError) {
+      console.error('Payment settled notification error:', notifyError);
+    }
+
     const updated = await populateAdminPaymentQuery(Payment.findById(payment._id));
 
     return res.status(200).json({
@@ -419,9 +535,38 @@ const settlePayment = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/payments/history
+ * Auth: tenant and/or owner — returns confirmed payments for the logged-in user.
+ */
+const getPaymentHistory = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const payments = await populateHistoryPaymentQuery(
+      Payment.find({
+        status: { $in: PAID_STATUSES },
+        $or: [{ tenant: userId }, { owner: userId }],
+      }).sort({ paidAt: -1, createdAt: -1 })
+    );
+
+    return res.status(200).json({
+      payments: payments.map((payment) =>
+        serializeHistoryPayment(payment, userId)
+      ),
+    });
+  } catch (error) {
+    console.error('Get payment history error:', error);
+    return res.status(500).json({
+      message: 'Server error while fetching payment history',
+    });
+  }
+};
+
 module.exports = {
   createPaymentSession,
   verifyPayment,
+  getPaymentHistory,
   getAdminPayments,
   getAdminStats,
   settlePayment,

@@ -167,7 +167,7 @@ export default function AdminPaymentsScreen() {
         >
           {loading ? (
             <View style={styles.emptyState}>
-              <ActivityIndicator size="large" color="#1A237E" />
+              <ActivityIndicator size="large" color="#323a8f" />
               <Text style={styles.emptyText}>Loading payments...</Text>
             </View>
           ) : errorMessage ? (
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   filterChipActive: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
   },
   filterChipText: {
     fontSize: 13,
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A237E',
+    color: '#323a8f',
   },
   emptyText: {
     marginTop: 6,
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   assetName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A237E',
+    color: '#323a8f',
     marginBottom: 4,
   },
   dateText: {
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   },
   metaValueStrong: {
     fontSize: 15,
-    color: '#1A237E',
+    color: '#323a8f',
     fontWeight: '700',
   },
   metaProfit: {
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   },
   settleBtn: {
     marginTop: 16,
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     minHeight: 46,
     flexDirection: 'row',

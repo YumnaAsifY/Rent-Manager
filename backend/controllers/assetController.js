@@ -1,6 +1,7 @@
 const Asset = require('../models/Asset');
 const Rental = require('../models/Rental');
 const RentalRequest = require('../models/RentalRequest');
+const { getOwnerRentPaymentStatus } = require('../utils/billingCycle');
 
 const formatDate = (value) => {
   if (!value) {
@@ -59,6 +60,8 @@ const serializeAsset = (asset) => {
     leaseEndDate: asset.leaseEndDate || null,
     startDate: formatDate(asset.leaseStartDate),
     endDate: formatDate(asset.leaseEndDate),
+    rentPaymentStatus: null,
+    rentPaymentLabel: null,
     createdAt: asset.createdAt,
     updatedAt: asset.updatedAt,
   };
@@ -177,8 +180,44 @@ const getMyAssets = async (req, res) => {
       .populate('tenant', 'name phoneNumber')
       .sort({ createdAt: -1 });
 
+    const rentedIds = assets
+      .filter((asset) => asset.status === 'Rented')
+      .map((asset) => asset._id);
+
+    const rentals = rentedIds.length
+      ? await Rental.find({
+          asset: { $in: rentedIds },
+          isCurrent: true,
+        })
+      : [];
+
+    const rentalByAsset = new Map(
+      rentals.map((rental) => [rental.asset.toString(), rental])
+    );
+
+    const serialized = await Promise.all(
+      assets.map(async (asset) => {
+        const base = serializeAsset(asset);
+        if (asset.status !== 'Rented') {
+          return base;
+        }
+
+        const rental = rentalByAsset.get(asset._id.toString());
+        if (!rental) {
+          return base;
+        }
+
+        const paymentStatus = await getOwnerRentPaymentStatus(rental);
+        return {
+          ...base,
+          rentPaymentStatus: paymentStatus.rentPaymentStatus,
+          rentPaymentLabel: paymentStatus.rentPaymentLabel,
+        };
+      })
+    );
+
     return res.status(200).json({
-      assets: assets.map(serializeAsset),
+      assets: serialized,
     });
   } catch (error) {
     console.error('Get my assets error:', error);
@@ -222,8 +261,23 @@ const getAssetById = async (req, res) => {
       });
     }
 
+    const serialized = serializeAsset(asset);
+
+    if (asset.status === 'Rented') {
+      const rental = await Rental.findOne({
+        asset: asset._id,
+        isCurrent: true,
+      });
+
+      if (rental) {
+        const paymentStatus = await getOwnerRentPaymentStatus(rental);
+        serialized.rentPaymentStatus = paymentStatus.rentPaymentStatus;
+        serialized.rentPaymentLabel = paymentStatus.rentPaymentLabel;
+      }
+    }
+
     return res.status(200).json({
-      asset: serializeAsset(asset),
+      asset: serialized,
     });
   } catch (error) {
     console.error('Get asset by id error:', error);
@@ -259,22 +313,24 @@ const createAsset = async (req, res) => {
       return res.status(400).json({ message: 'Asset image is required' });
     }
 
-    let monthlyRent;
-    if (
-      req.body.monthlyRent !== undefined &&
-      req.body.monthlyRent !== null &&
-      String(req.body.monthlyRent).trim() !== ''
-    ) {
-      const parsedRent = Number(String(req.body.monthlyRent).replace(/,/g, ''));
+    const rentRaw =
+      req.body.monthlyRent !== undefined && req.body.monthlyRent !== null
+        ? String(req.body.monthlyRent).trim()
+        : '';
 
-      if (Number.isNaN(parsedRent) || parsedRent < 0) {
-        return res.status(400).json({
-          message: 'Monthly rent must be a valid number',
-        });
-      }
-
-      monthlyRent = parsedRent;
+    if (!rentRaw) {
+      return res.status(400).json({ message: 'Rent is required' });
     }
+
+    const parsedRent = Number(rentRaw.replace(/,/g, ''));
+
+    if (Number.isNaN(parsedRent) || parsedRent <= 0) {
+      return res.status(400).json({
+        message: 'Monthly rent must be a valid number',
+      });
+    }
+
+    const monthlyRent = parsedRent;
 
     const asset = await Asset.create({
       name,

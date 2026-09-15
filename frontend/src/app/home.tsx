@@ -237,7 +237,7 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Open navigation menu"
               >
-                <Ionicons name="menu" size={30} color="#1a237e" />
+                <Ionicons name="menu" size={30} color="#FFFFFF" />
               </TouchableOpacity>
 
               <View style={styles.desktopUserInfo}>
@@ -257,7 +257,7 @@ export default function HomeScreen() {
                 <Ionicons
                   name="notifications-outline"
                   size={28}
-                  color="#1a237e"
+                  color="#FFFFFF"
                 />
                 {unreadNotificationsCount > 0 ? (
                   <View style={styles.notificationBadge}>
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 250,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     paddingHorizontal: 16,
     paddingTop: 22,
     paddingBottom: 24,
@@ -518,9 +518,9 @@ const styles = StyleSheet.create({
   },
   desktopHeader: {
     minHeight: 82,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#323a8f',
     borderBottomWidth: 1,
-    borderBottomColor: '#e8eaf6',
+    borderBottomColor: '#2c337d',
     justifyContent: 'center',
     paddingHorizontal: 28,
   },
@@ -536,19 +536,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 18,
-    backgroundColor: '#e8eaf6',
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   desktopUserInfo: {
     flex: 1,
   },
   desktopUserName: {
-    color: '#1a237e',
+    color: '#FFFFFF',
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 2,
   },
   desktopWelcomeText: {
-    color: '#283593',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   heroTitle: {
-    color: '#1a237e',
+    color: '#323a8f',
     fontSize: 40,
     lineHeight: 46,
     fontWeight: 'bold',

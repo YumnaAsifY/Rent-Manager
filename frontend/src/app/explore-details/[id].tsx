@@ -266,7 +266,7 @@ export default function ExploreAssetDetailsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a237e" />
+        <ActivityIndicator size="large" color="#323a8f" />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -275,7 +275,7 @@ export default function ExploreAssetDetailsScreen() {
   if (!asset) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
         <ScreenHeader title="Asset Details" variant="dark" />
         <View style={styles.notFoundContainer}>
           <Ionicons name="alert-circle-outline" size={60} color="#CBD5E1" />
@@ -296,7 +296,7 @@ export default function ExploreAssetDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
 
       <ScreenHeader title="Asset Details" variant="dark" />
 
@@ -452,7 +452,7 @@ export default function ExploreAssetDetailsScreen() {
                       width: '100%',
                     }}
                   />
-                  <Ionicons name="calendar-outline" size={20} color="#1A237E" />
+                  <Ionicons name="calendar-outline" size={20} color="#323a8f" />
                 </View>
               ) : (
                 <>
@@ -468,7 +468,7 @@ export default function ExploreAssetDetailsScreen() {
                     >
                       {startDateText || 'Select Start Date'}
                     </Text>
-                    <Ionicons name="calendar-outline" size={20} color="#1A237E" />
+                    <Ionicons name="calendar-outline" size={20} color="#323a8f" />
                   </TouchableOpacity>
                   {showStartPicker ? (
                     <DateTimePicker
@@ -509,7 +509,7 @@ export default function ExploreAssetDetailsScreen() {
                       width: '100%',
                     }}
                   />
-                  <Ionicons name="calendar-outline" size={20} color="#1A237E" />
+                  <Ionicons name="calendar-outline" size={20} color="#323a8f" />
                 </View>
               ) : (
                 <>
@@ -525,7 +525,7 @@ export default function ExploreAssetDetailsScreen() {
                     >
                       {endDateText || 'Select End Date'}
                     </Text>
-                    <Ionicons name="calendar-outline" size={20} color="#1A237E" />
+                    <Ionicons name="calendar-outline" size={20} color="#323a8f" />
                   </TouchableOpacity>
                   {showEndPicker ? (
                     <DateTimePicker
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
   detailRent: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A237E',
+    color: '#323a8f',
   },
   divider: {
     height: 1,
@@ -704,14 +704,14 @@ const styles = StyleSheet.create({
   ownerPhone: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A237E',
+    color: '#323a8f',
     textDecorationLine: 'underline',
   },
   buttonContainer: {
     marginTop: 16,
   },
   requestButton: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -814,7 +814,7 @@ const styles = StyleSheet.create({
   },
   modalConfirmButton: {
     flex: 1,
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',

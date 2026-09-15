@@ -28,6 +28,10 @@ import {
   getAssetImageUrl,
   makeAssetAvailable,
 } from '@/services/assets';
+import {
+  getOwnerRentStatusLabel,
+  getRentStatusColors,
+} from '@/utils/rentPaymentStatus';
 
 const { width, height } = Dimensions.get('window');
 const isWeb = width > 768;
@@ -193,13 +197,13 @@ export default function MyAssetsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
 
       <ScreenHeader title="My Assets" variant="dark" />
 
       {isLoading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#1A237E" />
+          <ActivityIndicator size="large" color="#323a8f" />
           <Text style={styles.stateText}>Loading assets...</Text>
         </View>
       ) : (
@@ -306,6 +310,21 @@ export default function MyAssetsScreen() {
                             <Text style={styles.leaseEndedText}>Lease Ended</Text>
                           )}
                       </View>
+                      {asset.status === 'Rented' &&
+                      getOwnerRentStatusLabel(asset.rentPaymentStatus) ? (
+                        <Text
+                          style={[
+                            styles.paymentStatusLine,
+                            {
+                              color: getRentStatusColors(
+                                asset.rentPaymentStatus
+                              ).color,
+                            },
+                          ]}
+                        >
+                          {getOwnerRentStatusLabel(asset.rentPaymentStatus)}
+                        </Text>
+                      ) : null}
                     </View>
                   </TouchableOpacity>
 
@@ -340,7 +359,7 @@ export default function MyAssetsScreen() {
           style={styles.addButton}
           onPress={() => router.push('/add-asset' as any)}
         >
-          <Ionicons name="add" size={22} color="#1A237E" />
+          <Ionicons name="add" size={22} color="#323a8f" />
           <Text style={styles.addButtonText}>Add asset</Text>
         </TouchableOpacity>
       </View>
@@ -453,7 +472,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryButton: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
@@ -533,7 +552,7 @@ const styles = StyleSheet.create({
   rentText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A237E',
+    color: '#323a8f',
     marginBottom: 4,
   },
   statusRow: {
@@ -557,8 +576,14 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontWeight: '500',
   },
+  paymentStatusLine: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
   makeAvailableButton: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
@@ -589,7 +614,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
-    borderColor: '#1A237E',
+    borderColor: '#323a8f',
     borderRadius: 12,
     paddingVertical: 14,
     gap: 8,
@@ -597,7 +622,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A237E',
+    color: '#323a8f',
   },
   modalOverlay: {
     flex: 1,

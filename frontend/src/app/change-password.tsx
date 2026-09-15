@@ -1,10 +1,11 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, Alert, ScrollView, Image, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, ScrollView, Image } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
+import { showAlert } from '@/utils/showAlert';
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
@@ -46,13 +47,13 @@ export default function ChangePasswordScreen() {
 
     // 1. Sab fields fill hain?
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill all fields');
+      showAlert('Error', 'Please fill all fields');
       return;
     }
 
     // 2. New password valid?
     if (!isPasswordValid(newPassword)) {
-      Alert.alert(
+      showAlert(
         'Error',
         'New password must be at least 8 characters with uppercase, lowercase, and number'
       );
@@ -61,7 +62,7 @@ export default function ChangePasswordScreen() {
 
     // 3. New password and confirm password match?
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert('Error', 'Passwords do not match');
       return;
     }
 
@@ -86,26 +87,12 @@ export default function ChangePasswordScreen() {
       setNewPassword('');
       setConfirmPassword('');
 
-      Alert.alert(
-        'Success',
-        'Password changed successfully',
-        [
-          {
-            text: 'OK',
-            onPress: goToProfile,
-          },
-        ]
-      );
-
-      // On web, Alert.alert does not run the OK button callback.
-      if (Platform.OS === 'web') {
-        goToProfile();
-      }
+      showAlert('Password changed', undefined, goToProfile);
     } catch (error) {
       const message =
         error instanceof ApiError
           ? error.message
-          : 'Unable to change password. Please try again.';
+          : 'Password could not be changed. Please try again.';
 
       if (message.toLowerCase().includes('current password is incorrect')) {
         setCurrentPasswordError('Current password is incorrect.');
@@ -116,7 +103,7 @@ export default function ChangePasswordScreen() {
           'New password must be different from your current password.'
         );
       } else {
-        Alert.alert('Error', message);
+        showAlert('Error', 'Password could not be changed. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -295,7 +282,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: 1,
@@ -349,7 +336,7 @@ const styles = StyleSheet.create({
   },
   changeButton: {
     height: 54,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',

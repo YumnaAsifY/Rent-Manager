@@ -36,6 +36,11 @@ export type Rental = {
   owner: RentalOwner | null;
   ownerName: string | null;
   ownerPhone: string | null;
+  canPayRent?: boolean;
+  currentCyclePaid?: boolean;
+  isOverdue?: boolean;
+  rentPaymentStatus?: 'unpaid' | 'overdue' | 'paid' | 'settled' | null;
+  rentPaymentLabel?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };

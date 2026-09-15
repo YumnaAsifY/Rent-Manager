@@ -1,11 +1,12 @@
 
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
 import { ApiError, apiRequest } from '@/services/api';
+import { showAlert } from '@/utils/showAlert';
 
 export default function RegistrationScreen() {
   const router = useRouter();
@@ -62,13 +63,13 @@ export default function RegistrationScreen() {
   const handleRegister = async() => {
     // 1. Sab fields fill hain?
     if (!name || !phoneNumber || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill all fields');
+      showAlert('Error', 'Please fill all fields');
       return;
     }
 
     if (!isGmailAddress(email)) {
       setEmailValidationMessage('Please enter a valid Gmail address');
-      Alert.alert(
+      showAlert(
         'Invalid Email',
         'Please enter a valid Gmail address ending with @gmail.com'
       );
@@ -77,13 +78,13 @@ export default function RegistrationScreen() {
 
     // 2. Phone number exactly 11 digits?
     if (phoneNumber.length !== 11) {
-      Alert.alert('Error', 'Phone number must be exactly 11 digits');
+      showAlert('Error', 'Phone number must be exactly 11 digits');
       return;
     }
 
     // 3. Password valid?
     if (!isPasswordValid(password)) {
-      Alert.alert(
+      showAlert(
         'Error',
         'Password must be at least 8 characters with uppercase, lowercase, and number'
       );
@@ -92,7 +93,7 @@ export default function RegistrationScreen() {
 
     // 4. Password match?
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert('Error', 'Passwords do not match');
       return;
     }
 try {
@@ -109,10 +110,11 @@ try {
   await login(email.trim().toLowerCase(), password);
   setPassword('');
   setConfirmPassword('');
-  Alert.alert('Success', 'Registration successful!');
-  router.replace('/home');
+  showAlert('Registered successfully', undefined, () => {
+    router.replace('/home');
+  });
 } catch (error) {
-  Alert.alert(
+  showAlert(
     'Error',
     error instanceof ApiError ? error.message : 'Could not connect to server'
   );
@@ -277,7 +279,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
     textAlign: 'center',
     marginBottom: 30,
     letterSpacing: 1,
@@ -327,12 +329,12 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     height: 54,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#1a237e',
+    shadowColor: '#323a8f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -357,7 +359,7 @@ const styles = StyleSheet.create({
   },
   loginTextBold: {
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
   },
   
 });

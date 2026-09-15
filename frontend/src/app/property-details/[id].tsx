@@ -64,7 +64,7 @@ export default function AssetDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a237e" />
+        <ActivityIndicator size="large" color="#323a8f" />
         <Text style={styles.loadingText}>Loading details...</Text>
       </View>
     );
@@ -73,7 +73,7 @@ export default function AssetDetailScreen() {
   if (!asset) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
         <ScreenHeader title="Asset Details" variant="dark" />
         <View style={styles.notFoundContainer}>
           <Ionicons name="alert-circle-outline" size={60} color="#CBD5E1" />
@@ -90,7 +90,7 @@ export default function AssetDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
 
       <ScreenHeader title="Asset Details" variant="dark" />
 
@@ -169,7 +169,7 @@ export default function AssetDetailScreen() {
                         <Ionicons
                           name="calendar-outline"
                           size={16}
-                          color="#1a237e"
+                          color="#323a8f"
                         />
                         <Text style={styles.dateLabel}>Start Date</Text>
                       </View>
@@ -183,7 +183,7 @@ export default function AssetDetailScreen() {
                         <Ionicons
                           name="calendar-outline"
                           size={16}
-                          color="#1a237e"
+                          color="#323a8f"
                         />
                         <Text style={styles.dateLabel}>End Date</Text>
                       </View>
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   detailRent: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
   },
   divider: {
     height: 1,

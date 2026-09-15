@@ -1,9 +1,10 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 
 import { ApiError, apiRequest } from '@/services/api';
+import { showAlert } from '@/utils/showAlert';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function ForgotPasswordScreen() {
     setEmailError('');
 
     if (!email) {
-      Alert.alert('Error', 'Please enter your email');
+      showAlert('Error', 'Please enter your email');
       return;
     }
 
@@ -40,19 +41,20 @@ export default function ForgotPasswordScreen() {
     setIsSubmitting(true);
 
     try {
-      const data = await apiRequest<{ message: string }>('/api/auth/forgot-password', {
+      await apiRequest<{ message: string }>('/api/auth/forgot-password', {
         method: 'POST',
         body: JSON.stringify({
           email: email.trim(),
         }),
       });
 
-      Alert.alert(
-        'Success',
-        `${data.message || 'If this email is registered, a password reset link has been sent.'} On your phone, open the Gmail app (not this app) and check Inbox, Promotions, Updates, Spam, and Sent for the same Google account.`
+      const sentTo = email.trim();
+      showAlert(
+        'Reset link sent',
+        `We sent a password reset link to ${sentTo}.`
       );
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Error',
         error instanceof ApiError
           ? error.message
@@ -69,7 +71,7 @@ export default function ForgotPasswordScreen() {
       
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <EvilIcons name="lock" size={80} color="#1a237e" />  
+          <EvilIcons name="lock" size={80} color="#323a8f" />  
         </View>
 
         <Text style={styles.title}>Forgot Password</Text>
@@ -139,7 +141,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: 1,
@@ -178,7 +180,7 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     height: 54,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -207,6 +209,6 @@ const styles = StyleSheet.create({
   },
   backToLoginBold: {
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
   },
 });

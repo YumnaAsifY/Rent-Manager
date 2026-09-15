@@ -27,6 +27,8 @@ export type Asset = {
   leaseEndDate: string | null;
   startDate: string | null;
   endDate: string | null;
+  rentPaymentStatus?: 'unpaid' | 'overdue' | 'paid' | 'settled' | null;
+  rentPaymentLabel?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };

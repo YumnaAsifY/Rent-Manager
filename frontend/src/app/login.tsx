@@ -1,9 +1,10 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
+import { showAlert } from '@/utils/showAlert';
 export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
@@ -15,7 +16,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     setLoginError('');
     if (!email.trim() || !password) {
-      Alert.alert('Error', 'Please fill all fields');
+      showAlert('Error', 'Please fill all fields');
       return;
     }
     if (isSubmitting) {
@@ -25,13 +26,14 @@ export default function LoginScreen() {
     try {
       const loggedInUser = await login(email.trim().toLowerCase(), password);
       setPassword('');
-      Alert.alert('Success', 'Login successful!');
-      router.replace(
-        loggedInUser.role === 'admin' ? '/admin' : '/home'
-      );
+      showAlert('Successfully logged in', undefined, () => {
+        router.replace(
+          loggedInUser.role === 'admin' ? '/admin' : '/home'
+        );
+      });
     } catch (error) {
       if (error instanceof ApiError && error.status === 0) {
-        Alert.alert('Login Failed', error.message);
+        showAlert('Login Failed', error.message);
       } else if (error instanceof ApiError) {
         setLoginError(
           error.status === 403
@@ -39,7 +41,7 @@ export default function LoginScreen() {
             : 'Incorrect email or password.'
         );
       } else {
-        Alert.alert('Login Failed', 'Unable to connect to server');
+        showAlert('Login Failed', 'Unable to connect to server');
       }
     } finally {
       setIsSubmitting(false);
@@ -145,7 +147,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
     textAlign: 'center',
     marginBottom: 8,
     letterSpacing: 1,
@@ -207,13 +209,13 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: '#1a237e',
+    color: '#323a8f',
     fontWeight: '600',
   },
   // LOGIN BUTTON (Same as Registration)
   loginButton: {
     height: 54,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -244,6 +246,6 @@ const styles = StyleSheet.create({
   },
   registerTextBold: {
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
   },
 });

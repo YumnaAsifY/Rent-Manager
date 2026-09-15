@@ -26,11 +26,13 @@ function AuthenticatedRoutes() {
     const isAdminRoute = rootRoute === 'admin';
 
     if (!user && !publicRoutes.has(rootRoute)) {
-      router.replace('/login');
+      if (rootRoute !== 'login') {
+        router.replace('/login');
+      }
       return;
     }
 
-    if (user && isAdminRoute && user.role !== 'admin') {
+    if (user && isAdminRoute && user.role !== 'admin' && rootRoute !== 'home') {
       router.replace('/home');
     }
   }, [isLoading, router, segments, user]);

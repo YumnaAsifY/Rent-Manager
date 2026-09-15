@@ -20,6 +20,8 @@ const notificationSchema = new mongoose.Schema(
         'payment_due_today',
         'payment_overdue',
         'payment_unpaid_warning',
+        'payment_received',
+        'payment_settled',
       ],
       required: true,
     },

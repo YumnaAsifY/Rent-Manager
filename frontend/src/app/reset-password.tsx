@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: 1,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     height: 54,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -303,6 +303,6 @@ const styles = StyleSheet.create({
   },
   backToLoginBold: {
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#323a8f',
   },
 });

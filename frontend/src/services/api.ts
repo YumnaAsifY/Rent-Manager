@@ -3,7 +3,7 @@ import { NativeModules, Platform } from 'react-native';
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
-const extractLanIp = (value) => {
+const extractLanIp = (value: unknown) => {
   if (!value) {
     return null;
   }
@@ -20,6 +20,12 @@ const extractLanIp = (value) => {
 
 const resolveApiBaseUrl = () => {
   if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return 'http://' + host + ':5000';
+      }
+    }
     return 'http://localhost:5000';
   }
 
@@ -59,14 +65,20 @@ const resolveApiBaseUrl = () => {
 export const API_BASE_URL = resolveApiBaseUrl();
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  status: number;
+
+  constructor(message: string, status: number) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
   }
 }
 
-export async function apiRequest(path, options = {}, token) {
+export async function apiRequest<T = unknown>(
+  path: string,
+  options: RequestInit = {},
+  token?: string
+): Promise<T> {
   const headers = new Headers(options.headers);
 
   if (options.body && !headers.has('Content-Type')) {
@@ -84,11 +96,11 @@ export async function apiRequest(path, options = {}, token) {
     });
 
     const responseText = await response.text();
-    let data = {};
+    let data: { message?: string } = {};
 
     if (responseText) {
       try {
-        data = JSON.parse(responseText);
+        data = JSON.parse(responseText) as { message?: string };
       } catch (parseError) {
         data = {};
       }
@@ -103,7 +115,7 @@ export async function apiRequest(path, options = {}, token) {
       throw new ApiError(message, response.status);
     }
 
-    return data;
+    return data as T;
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

@@ -60,7 +60,7 @@ export default function Header({ userName }: HeaderProps) {
             onPress={() => router.push('/notifications' as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="notifications-outline" size={28} color="#1a237e" />
+            <Ionicons name="notifications-outline" size={28} color="#FFFFFF" />
             {unreadCount > 0 ? (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -77,7 +77,7 @@ export default function Header({ userName }: HeaderProps) {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    backgroundColor: '#e8eaf6',
+    backgroundColor: '#323a8f',
     minHeight: Platform.OS === 'web' ? 56 : 88,
     paddingTop: Platform.OS === 'web' ? 10 : 42,
     paddingBottom: 10,
@@ -99,12 +99,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a237e',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   welcomeText: {
     fontSize: 16,
-    color: '#283593',
+    color: 'rgba(255,255,255,0.85)',
     fontWeight: '500',
   },
   notificationButton: {

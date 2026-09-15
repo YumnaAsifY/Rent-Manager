@@ -26,6 +26,10 @@ import {
   getRentalImageUrl,
   hideExpiredRentals,
 } from '@/services/rentals';
+import {
+  getRentStatusColors,
+  getTenantRentStatusLabel,
+} from '@/utils/rentPaymentStatus';
 
 const { width, height } = Dimensions.get('window');
 const isWeb = width > 768;
@@ -182,7 +186,7 @@ export default function RentalsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a237e" />
+        <ActivityIndicator size="large" color="#323a8f" />
         <Text style={styles.loadingText}>Loading rentals...</Text>
       </View>
     );
@@ -209,7 +213,7 @@ export default function RentalsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
 
       <ScreenHeader
         title="My Rentals"
@@ -282,7 +286,7 @@ export default function RentalsScreen() {
                     <Ionicons
                       name={isSelected ? 'checkbox' : 'square-outline'}
                       size={22}
-                      color={isSelected ? '#1A237E' : '#94A3B8'}
+                      color={isSelected ? '#323a8f' : '#94A3B8'}
                     />
                   </View>
                 ) : null}
@@ -335,6 +339,31 @@ export default function RentalsScreen() {
                   </Text>
                   {rental.rent ? (
                     <Text style={styles.rentText}>{rental.rent}</Text>
+                  ) : null}
+                  {getTenantRentStatusLabel(rental.rentPaymentStatus) ? (
+                    <View
+                      style={[
+                        styles.paymentBadge,
+                        {
+                          backgroundColor: getRentStatusColors(
+                            rental.rentPaymentStatus
+                          ).backgroundColor,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.paymentBadgeText,
+                          {
+                            color: getRentStatusColors(
+                              rental.rentPaymentStatus
+                            ).color,
+                          },
+                        ]}
+                      >
+                        {getTenantRentStatusLabel(rental.rentPaymentStatus)}
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
               </TouchableOpacity>
@@ -438,7 +467,7 @@ const styles = StyleSheet.create({
   selectionCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A237E',
+    color: '#323a8f',
   },
   deleteSelectedButton: {
     backgroundColor: '#EF4444',
@@ -475,7 +504,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   cardSelected: {
-    borderColor: '#1A237E',
+    borderColor: '#323a8f',
     backgroundColor: '#F5F7FF',
   },
   cardLocked: {
@@ -539,8 +568,20 @@ const styles = StyleSheet.create({
   rentText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A237E',
+    color: '#323a8f',
     marginBottom: 4,
+  },
+  paymentBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    maxWidth: '100%',
+  },
+  paymentBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -560,7 +601,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryButton: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,

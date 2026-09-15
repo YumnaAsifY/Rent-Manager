@@ -40,7 +40,13 @@ export default function AddAssetScreen() {
   const [imageFileName, setImageFileName] = useState<string | null>(null);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    type?: string;
+    location?: string;
+    rent?: string;
+    image?: string;
+  }>({});
 
   const assetTypes = ['House', 'Apartment', 'Shop', 'Plot'];
 
@@ -66,35 +72,50 @@ export default function AddAssetScreen() {
       setImage(picked.uri);
       setImageMimeType(picked.mimeType ?? null);
       setImageFileName(picked.fileName ?? null);
-      setFormError('');
+      setFieldErrors((prev) => ({ ...prev, image: undefined }));
     }
   };
 
   const handleSaveAsset = async () => {
-    setFormError('');
+    const nextErrors: {
+      name?: string;
+      type?: string;
+      location?: string;
+      rent?: string;
+      image?: string;
+    } = {};
 
     if (!assetName.trim()) {
-      setFormError('Asset name is required');
-      return;
+      nextErrors.name = 'Asset name is required';
     }
 
     if (!assetType.trim()) {
-      setFormError('Asset type is required');
-      return;
+      nextErrors.type = 'Asset type is required';
     }
 
     if (!location.trim()) {
-      setFormError('Location is required');
-      return;
+      nextErrors.location = 'Location is required';
+    }
+
+    const parsedRent = Number(String(monthlyRent).replace(/,/g, '').trim());
+    if (!String(monthlyRent).trim()) {
+      nextErrors.rent = 'Rent is required';
+    } else if (Number.isNaN(parsedRent) || parsedRent <= 0) {
+      nextErrors.rent = 'Enter a valid rent amount';
     }
 
     if (!image) {
-      setFormError('Asset image is required');
+      nextErrors.image = 'Asset image is required';
+    }
+
+    setFieldErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
     if (!token) {
-      setFormError('Authentication required');
+      Alert.alert('Error', 'Authentication required');
       return;
     }
 
@@ -131,7 +152,6 @@ export default function AddAssetScreen() {
         error instanceof ApiError
           ? error.message
           : 'Unable to save asset. Please try again.';
-      setFormError(message);
       Alert.alert('Error', message);
     } finally {
       setIsSubmitting(false);
@@ -140,7 +160,7 @@ export default function AddAssetScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
+      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
 
       <ScreenHeader title="Add New Asset" variant="dark" />
 
@@ -158,10 +178,13 @@ export default function AddAssetScreen() {
             value={assetName}
             onChangeText={(text) => {
               setAssetName(text);
-              setFormError('');
+              setFieldErrors((prev) => ({ ...prev, name: undefined }));
             }}
             editable={!isSubmitting}
           />
+          {fieldErrors.name ? (
+            <Text style={styles.fieldErrorText}>{fieldErrors.name}</Text>
+          ) : null}
         </View>
 
         <View style={styles.inputContainer}>
@@ -174,8 +197,11 @@ export default function AddAssetScreen() {
             <Text style={[styles.dropdownText, !assetType && { color: '#94A3B8' }]}>
               {assetType || 'Select Type'}
             </Text>
-            <Ionicons name="chevron-down" size={20} color="#1a237e" />
+            <Ionicons name="chevron-down" size={20} color="#323a8f" />
           </TouchableOpacity>
+          {fieldErrors.type ? (
+            <Text style={styles.fieldErrorText}>{fieldErrors.type}</Text>
+          ) : null}
         </View>
 
         <View style={styles.inputContainer}>
@@ -187,24 +213,33 @@ export default function AddAssetScreen() {
             value={location}
             onChangeText={(text) => {
               setLocation(text);
-              setFormError('');
+              setFieldErrors((prev) => ({ ...prev, location: undefined }));
             }}
             editable={!isSubmitting}
           />
           <ViewLocationButton location={location} />
+          {fieldErrors.location ? (
+            <Text style={styles.fieldErrorText}>{fieldErrors.location}</Text>
+          ) : null}
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Rent (PKR) — optional</Text>
+          <Text style={styles.label}>Rent (PKR)</Text>
           <TextInput
             style={styles.input}
             placeholder="30,000"
             placeholderTextColor="#94A3B8"
             keyboardType="numeric"
             value={monthlyRent}
-            onChangeText={setMonthlyRent}
+            onChangeText={(text) => {
+              setMonthlyRent(text);
+              setFieldErrors((prev) => ({ ...prev, rent: undefined }));
+            }}
             editable={!isSubmitting}
           />
+          {fieldErrors.rent ? (
+            <Text style={styles.fieldErrorText}>{fieldErrors.rent}</Text>
+          ) : null}
         </View>
 
         <View style={styles.inputContainer}>
@@ -238,9 +273,10 @@ export default function AddAssetScreen() {
               </View>
             )}
           </TouchableOpacity>
+          {fieldErrors.image ? (
+            <Text style={styles.fieldErrorText}>{fieldErrors.image}</Text>
+          ) : null}
         </View>
-
-        {formError ? <Text style={styles.validationText}>{formError}</Text> : null}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -283,7 +319,7 @@ export default function AddAssetScreen() {
                 onPress={() => {
                   setAssetType(type);
                   setDropdownVisible(false);
-                  setFormError('');
+                  setFieldErrors((prev) => ({ ...prev, type: undefined }));
                 }}
               >
                 <Text
@@ -295,7 +331,7 @@ export default function AddAssetScreen() {
                   {type}
                 </Text>
                 {assetType === type && (
-                  <Ionicons name="checkmark" size={20} color="#1a237e" />
+                  <Ionicons name="checkmark" size={20} color="#323a8f" />
                 )}
               </TouchableOpacity>
             ))}
@@ -383,10 +419,10 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  validationText: {
+  fieldErrorText: {
     fontSize: 13,
     color: '#EF4444',
-    marginBottom: 8,
+    marginTop: 6,
   },
   bottomSpacing: {
     height: 20,
@@ -399,7 +435,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     height: 54,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#323a8f',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -450,7 +486,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   modalItemTextActive: {
-    color: '#1a237e',
+    color: '#323a8f',
     fontWeight: '600',
   },
 });

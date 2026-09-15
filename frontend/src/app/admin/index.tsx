@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1A237E',
+    color: '#323a8f',
     marginBottom: 4,
   },
   welcomeSubtitle: {

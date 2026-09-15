@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8EAF6',
   },
-  type: { fontSize: 16, fontWeight: '700', color: '#1A237E' },
+  type: { fontSize: 16, fontWeight: '700', color: '#323a8f' },
   meta: { marginTop: 4, fontSize: 13, color: '#5C6BC0' },
   status: { marginTop: 6, fontSize: 12, fontWeight: '600', color: '#64748B' },
   actions: { flexDirection: 'row', gap: 16, marginTop: 12 },

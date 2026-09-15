@@ -23,7 +23,7 @@ export default function ScreenHeader({
 }: ScreenHeaderProps) {
   const router = useRouter();
   const isDark = variant === 'dark';
-  const foregroundColor = isDark ? '#FFFFFF' : '#1a237e';
+  const foregroundColor = isDark ? '#FFFFFF' : '#323a8f';
 
   const handleBack = () => {
     if (onBack) {
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E8EAF6',
   },
   darkHeader: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#323a8f',
   },
   titleGroup: {
     minWidth: 0,
