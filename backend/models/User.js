@@ -81,6 +81,15 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+
+    emailVerified: {
+      type: Boolean,
+    },
+
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
   },
   {
     timestamps: true,

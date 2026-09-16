@@ -8,9 +8,10 @@ import { fetchUnreadNotificationsCount } from '@/services/notifications';
 
 interface HeaderProps {
   userName: string;
+  onMenuPress?: () => void;
 }
 
-export default function Header({ userName }: HeaderProps) {
+export default function Header({ userName, onMenuPress }: HeaderProps) {
   const router = useRouter();
   const { token } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -51,6 +52,16 @@ export default function Header({ userName }: HeaderProps) {
     <View style={styles.headerContainer}>
       <View style={styles.headerContent}>
         <View style={styles.headerRow}>
+          {onMenuPress ? (
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={onMenuPress}
+              accessibilityRole="button"
+              accessibilityLabel="Open menu"
+            >
+              <Ionicons name="menu" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : null}
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{userName}</Text>
             <Text style={styles.welcomeText}>Welcome to Rent Manager</Text>
@@ -92,6 +103,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  menuButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   userInfo: {
     flex: 1,

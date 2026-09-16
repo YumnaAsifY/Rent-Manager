@@ -9,7 +9,8 @@ export type RentPaymentStatus =
 export function getTenantRentStatusLabel(status: RentPaymentStatus) {
   if (status === 'overdue') return 'Overdue';
   if (status === 'unpaid') return 'Unpaid';
-  if (status === 'paid' || status === 'settled') return 'Paid for this month';
+  if (status === 'paid') return 'Pending settlement';
+  if (status === 'settled') return 'Paid for this month';
   return null;
 }
 

@@ -393,11 +393,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingTop: 12,
-    gap: 10,
+    gap: 14,
+    justifyContent: 'flex-start',
   },
   sectionTab: {
-    flex: 1,
-    minHeight: 42,
+    minHeight: 38,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -405,9 +407,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionTabFull: {
-    flex: 1,
-  },
+  sectionTabFull: {},
   sectionTabActive: {
     backgroundColor: '#323a8f',
     borderColor: '#323a8f',

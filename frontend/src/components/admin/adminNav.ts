@@ -1,4 +1,12 @@
-export const adminTabs = [
+export type AdminTab = {
+  name: string;
+  icon: string;
+  path: string;
+  match: (pathname: string) => boolean;
+  inBottomNav?: boolean;
+};
+
+export const adminTabs: AdminTab[] = [
   {
     name: 'Dashboard',
     icon: 'grid',
@@ -24,4 +32,12 @@ export const adminTabs = [
     path: '/admin/users',
     match: (pathname: string) => pathname.startsWith('/admin/users'),
   },
-] as const;
+  {
+    name: 'Asset Category',
+    icon: 'layers',
+    path: '/admin/asset-categories',
+    match: (pathname: string) =>
+      pathname.startsWith('/admin/asset-categories'),
+    inBottomNav: false,
+  },
+];

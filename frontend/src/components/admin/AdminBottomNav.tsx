@@ -22,7 +22,9 @@ export default function AdminBottomNav() {
 
   return (
     <View style={styles.container}>
-      {adminTabs.map((tab) => {
+      {adminTabs
+        .filter((tab) => tab.inBottomNav !== false)
+        .map((tab) => {
         const isActive = tab.match(pathname);
 
         return (

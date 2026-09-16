@@ -1,22 +1,84 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, ScrollView } from 'react-native';
 import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
-import { ApiError } from '@/services/api';
+import { ApiError, apiRequest } from '@/services/api';
 import { showAlert } from '@/utils/showAlert';
+import CenteredStatusModal from '../components/CenteredStatusModal';
+
 export default function LoginScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    registered?: string | string[];
+    email?: string | string[];
+  }>();
+  const registeredFlag = Array.isArray(params.registered)
+    ? params.registered[0]
+    : params.registered;
+  const registeredEmailParam = Array.isArray(params.email)
+    ? params.email[0]
+    : params.email;
+
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(registeredEmailParam || '');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({});
+  const [showRegistered, setShowRegistered] = useState(registeredFlag === '1');
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [verificationPendingEmail, setVerificationPendingEmail] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resendNote, setResendNote] = useState('');
+
+  const handleResendVerification = async (targetEmail: string) => {
+    const normalized = targetEmail.trim().toLowerCase();
+    if (!normalized || resending) {
+      return;
+    }
+
+    setResending(true);
+    setResendNote('');
+    try {
+      const data = await apiRequest<{ message?: string }>(
+        '/api/auth/resend-verification',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email: normalized }),
+        }
+      );
+      setResendNote(
+        data.message ||
+          'A verification link has been sent to your registered email.'
+      );
+    } catch (error) {
+      setResendNote(
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to send verification email.'
+      );
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleLogin = async () => {
     setLoginError('');
-    if (!email.trim() || !password) {
-      showAlert('Error', 'Please fill all fields');
+    setResendNote('');
+    const nextErrors: { email?: string; password?: string } = {};
+    if (!email.trim()) {
+      nextErrors.email = 'Required Email';
+    }
+    if (!password) {
+      nextErrors.password = 'Required Password';
+    }
+    setFieldErrors(nextErrors);
+    if (nextErrors.email || nextErrors.password) {
       return;
     }
     if (isSubmitting) {
@@ -34,6 +96,12 @@ export default function LoginScreen() {
     } catch (error) {
       if (error instanceof ApiError && error.status === 0) {
         showAlert('Login Failed', error.message);
+      } else if (
+        error instanceof ApiError &&
+        error.code === 'EMAIL_NOT_VERIFIED'
+      ) {
+        setVerificationPendingEmail(email.trim().toLowerCase());
+        setShowPendingModal(true);
       } else if (error instanceof ApiError) {
         setLoginError(
           error.status === 403
@@ -69,8 +137,12 @@ export default function LoginScreen() {
               onChangeText={(text) => {
                 setEmail(text);
                 setLoginError('');
+                setFieldErrors((prev) => ({ ...prev, email: undefined }));
               }}
             />
+            {fieldErrors.email ? (
+              <Text style={styles.validationText}>{fieldErrors.email}</Text>
+            ) : null}
           </View>
           {/* 2. Password */}
           <View style={styles.inputContainer}>
@@ -85,6 +157,7 @@ export default function LoginScreen() {
                 onChangeText={(text) => {
                   setPassword(text);
                   setLoginError('');
+                  setFieldErrors((prev) => ({ ...prev, password: undefined }));
                 }}
               />
               <TouchableOpacity
@@ -100,7 +173,9 @@ export default function LoginScreen() {
                 />
               </TouchableOpacity>
             </View>
-            {loginError ? (
+            {fieldErrors.password ? (
+              <Text style={styles.validationText}>{fieldErrors.password}</Text>
+            ) : loginError ? (
               <Text style={styles.validationText}>{loginError}</Text>
             ) : null}
           </View>
@@ -119,6 +194,26 @@ export default function LoginScreen() {
               {isSubmitting ? 'Logging in...' : 'Login'}
             </Text>
           </TouchableOpacity>
+          {verificationPendingEmail ? (
+            <View style={styles.resendWrap}>
+              <TouchableOpacity
+                style={styles.resendButton}
+                onPress={() =>
+                  void handleResendVerification(
+                    email.trim().toLowerCase() || verificationPendingEmail
+                  )
+                }
+                disabled={resending}
+              >
+                <Text style={styles.resendButtonText}>
+                  {resending ? 'Sending...' : 'Resend Verification Email'}
+                </Text>
+              </TouchableOpacity>
+              {resendNote ? (
+                <Text style={styles.resendNoteText}>{resendNote}</Text>
+              ) : null}
+            </View>
+          ) : null}
           {/* DON'T HAVE ACCOUNT? - REGISTER NOW */}
           <TouchableOpacity style={styles.registerContainer}
           onPress={() => router.push('/registration')} >
@@ -128,6 +223,24 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      <CenteredStatusModal
+        visible={showRegistered}
+        variant="success"
+        title="Registration Successful!"
+        message={`A verification link has been sent to your registered email:\n\n${
+          registeredEmailParam || email
+        }\n\nPlease check your email and verify your account before logging in.`}
+        buttonLabel="OK"
+        onButtonPress={() => setShowRegistered(false)}
+      />
+      <CenteredStatusModal
+        visible={showPendingModal}
+        variant="info"
+        title="Email Verification Pending"
+        message="Please check your registered email and verify your account before logging in."
+        buttonLabel="OK"
+        onButtonPress={() => setShowPendingModal(false)}
+      />
     </ScrollView>
   );
 }
@@ -232,6 +345,26 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.65,
+  },
+  resendWrap: {
+    marginTop: 14,
+    alignItems: 'center',
+  },
+  resendButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+  },
+  resendButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#323a8f',
+    textAlign: 'center',
+  },
+  resendNoteText: {
+    marginTop: 6,
+    fontSize: 13,
+    color: '#323a8f',
+    textAlign: 'center',
   },
   // REGISTER LINK - Don't have an account?
   registerContainer: {

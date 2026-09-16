@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 
-const sendPasswordResetEmail = async (to, webResetLink, expoResetLink) => {
-  const transporter = nodemailer.createTransport({
+const createTransporter = () =>
+  nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: Number(process.env.SMTP_PORT) || 587,
     secure: false,
@@ -10,6 +10,9 @@ const sendPasswordResetEmail = async (to, webResetLink, expoResetLink) => {
       pass: process.env.SMTP_PASS,
     },
   });
+
+const sendPasswordResetEmail = async (to, webResetLink, expoResetLink) => {
+  const transporter = createTransporter();
 
   await transporter.sendMail({
     from: process.env.EMAIL_FROM || process.env.SMTP_USER,
@@ -33,4 +36,72 @@ const sendPasswordResetEmail = async (to, webResetLink, expoResetLink) => {
   });
 };
 
-module.exports = { sendPasswordResetEmail };
+const sendVerificationEmail = async (to, verifyLink) => {
+  const transporter = createTransporter();
+  const safeHref = String(verifyLink).replace(/"/g, '&quot;');
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+    to,
+    subject: 'Verify your Rent Manager email',
+    text: `You registered on Rent Manager with this email address (${to}).\n\nPlease verify this email to confirm that the account belongs to you. You cannot log in until your email is verified.\n\nOpen this email on your phone or computer and tap Verify Email.\n\nIf you did not create this account, you can ignore this email.`,
+    html: `
+      <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1A1A1A;">
+        <p>You registered on <strong>Rent Manager</strong> using this email address:</p>
+        <p><strong>${to}</strong></p>
+        <p>Please verify this email to confirm that the account belongs to you. You cannot log in until your email is verified.</p>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:20px 0;">
+          <tr>
+            <td align="center" bgcolor="#323a8f" style="border-radius:8px;">
+              <a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:14px 32px;font-family:Arial,sans-serif;font-size:16px;line-height:20px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:8px;background-color:#323a8f;border:1px solid #323a8f;">
+                Verify Email
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p>You can open this email on your phone or computer. It verifies the same account.</p>
+        <p>If you did not create this account, you can ignore this email.</p>
+      </div>
+    `,
+  });
+};
+
+const sendContactEmail = async ({
+  adminEmail,
+  userName,
+  userEmail,
+  subject,
+  message,
+  sentAt,
+}) => {
+  const transporter = createTransporter();
+  const when = sentAt.toLocaleString('en-PK', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+    to: adminEmail,
+    replyTo: userEmail,
+    subject: `Rent Manager Contact Us: ${subject}`,
+    text: `Contact Us / User Feedback\n\nUser Name: ${userName}\nUser Email: ${userEmail}\nSubject: ${subject}\n\nMessage:\n${message}\n\nDate & Time: ${when}`,
+    html: `
+      <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1A1A1A;">
+        <h2 style="color:#323a8f;">Contact Us / User Feedback</h2>
+        <p><strong>User Name:</strong> ${userName}</p>
+        <p><strong>User Email:</strong> ${userEmail}</p>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Message:</strong></p>
+        <p style="white-space:pre-wrap;">${message.replace(/</g, '&lt;')}</p>
+        <p><strong>Date & Time:</strong> ${when}</p>
+      </div>
+    `,
+  });
+};
+
+module.exports = {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+  sendContactEmail,
+};

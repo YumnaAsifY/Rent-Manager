@@ -2,6 +2,7 @@ const Asset = require('../models/Asset');
 const Rental = require('../models/Rental');
 const RentalRequest = require('../models/RentalRequest');
 const { getOwnerRentPaymentStatus } = require('../utils/billingCycle');
+const { findValidCategoryName } = require('./assetCategoryController');
 
 const formatDate = (value) => {
   if (!value) {
@@ -305,6 +306,11 @@ const createAsset = async (req, res) => {
       return res.status(400).json({ message: 'Asset type is required' });
     }
 
+    const validType = await findValidCategoryName(type);
+    if (!validType) {
+      return res.status(400).json({ message: 'Invalid asset type' });
+    }
+
     if (!location) {
       return res.status(400).json({ message: 'Location is required' });
     }
@@ -334,7 +340,7 @@ const createAsset = async (req, res) => {
 
     const asset = await Asset.create({
       name,
-      type,
+      type: validType,
       location,
       description,
       image: `/uploads/${req.file.filename}`,

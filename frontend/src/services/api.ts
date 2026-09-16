@@ -66,11 +66,13 @@ export const API_BASE_URL = resolveApiBaseUrl();
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -96,7 +98,7 @@ export async function apiRequest<T = unknown>(
     });
 
     const responseText = await response.text();
-    let data: { message?: string } = {};
+    let data: { message?: string; code?: string } = {};
 
     if (responseText) {
       try {
@@ -112,7 +114,11 @@ export async function apiRequest<T = unknown>(
           ? data.message
           : 'Request failed';
 
-      throw new ApiError(message, response.status);
+      throw new ApiError(
+        message,
+        response.status,
+        data && typeof data.code === 'string' ? data.code : undefined
+      );
     }
 
     return data as T;

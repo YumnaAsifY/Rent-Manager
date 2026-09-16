@@ -19,6 +19,7 @@ import { useCallback, useState } from 'react';
 
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
+import ViewLocationButton from '../components/ViewLocationButton';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -283,6 +284,7 @@ export default function MyAssetsScreen() {
                         ) : null}
                       </View>
                       <Text style={styles.locationText}>{asset.location}</Text>
+                      <ViewLocationButton location={asset.location} />
                       <Text style={styles.typeText}>{asset.type}</Text>
                       {asset.rent ? (
                         <Text style={styles.rentText}>{asset.rent}</Text>

@@ -462,10 +462,14 @@ const getAdminStats = async (req, res) => {
 
     const [totalUsers, activeUsers, totalAssets, pendingSettlements] =
       await Promise.all([
-        User.countDocuments({ role: { $ne: 'admin' } }),
+        User.countDocuments({
+          role: { $ne: 'admin' },
+          emailVerified: { $ne: false },
+        }),
         User.countDocuments({
           role: { $ne: 'admin' },
           isActive: { $ne: false },
+          emailVerified: { $ne: false },
         }),
         Asset.countDocuments({}),
         Payment.countDocuments({ status: 'pending_settlement' }),

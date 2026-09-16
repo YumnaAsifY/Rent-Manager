@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { usePathname, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,11 +97,19 @@ export default function HomeScreen() {
     }
   };
 
-  const handleSidebarLogout = () => {
-    const confirmed = window.confirm('Are you sure you want to logout?');
-    if (confirmed) {
-      void performLogout();
+  const handleLogoutPress = () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to logout?');
+      if (confirmed) {
+        void performLogout();
+      }
+      return;
     }
+
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Logout', onPress: () => void performLogout() },
+    ]);
   };
 
   const cards = [
@@ -176,6 +186,13 @@ export default function HomeScreen() {
                     ]}
                     onPress={() => {
                       setIsSidebarOpen(false);
+                      if (tab.path === '/profile') {
+                        router.push({
+                          pathname: '/profile',
+                          params: { source: 'sidebar' },
+                        } as any);
+                        return;
+                      }
                       router.push(tab.path as any);
                     }}
                     activeOpacity={0.75}
@@ -204,13 +221,37 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 );
               })}
+              <TouchableOpacity
+                style={[
+                  styles.sidebarItem,
+                  pathname === '/contact' && styles.sidebarItemActive,
+                ]}
+                onPress={() => {
+                  setIsSidebarOpen(false);
+                  router.push('/contact' as any);
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={styles.sidebarIconWrapper}>
+                  <Ionicons
+                    name={
+                      (pathname === '/contact'
+                        ? 'chatbubble-ellipses'
+                        : 'chatbubble-ellipses-outline') as any
+                    }
+                    size={23}
+                    color="#ffffff"
+                  />
+                </View>
+                <Text style={styles.sidebarItemText}>Contact Us</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.sidebarFooter}>
               <View style={styles.sidebarFooterDivider} />
               <TouchableOpacity
                 style={styles.sidebarItem}
-                onPress={handleSidebarLogout}
+                onPress={handleLogoutPress}
                 activeOpacity={0.75}
                 accessibilityRole="button"
                 accessibilityLabel="Logout"
@@ -249,26 +290,42 @@ export default function HomeScreen() {
                 </Text>
               </View>
 
-              <TouchableOpacity
-                style={styles.desktopNotificationButton}
-                onPress={() => router.push('/notifications' as any)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="notifications-outline"
-                  size={28}
-                  color="#FFFFFF"
-                />
-                {unreadNotificationsCount > 0 ? (
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationBadgeText}>
-                      {unreadNotificationsCount > 9
-                        ? '9+'
-                        : unreadNotificationsCount}
-                    </Text>
-                  </View>
-                ) : null}
-              </TouchableOpacity>
+              <View style={styles.desktopHeaderActions}>
+                <TouchableOpacity
+                  style={styles.desktopNotificationButton}
+                  onPress={() => router.push('/notifications' as any)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={28}
+                    color="#FFFFFF"
+                  />
+                  {unreadNotificationsCount > 0 ? (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationBadgeText}>
+                        {unreadNotificationsCount > 9
+                          ? '9+'
+                          : unreadNotificationsCount}
+                      </Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.desktopProfileButton}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/profile',
+                      params: { source: 'header' },
+                    } as any)
+                  }
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open profile"
+                >
+                  <Ionicons name="person" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -336,12 +393,68 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {isSidebarOpen ? (
+        <Modal
+          visible={isSidebarOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsSidebarOpen(false)}
+        >
+          <Pressable
+            style={styles.mobileMenuOverlay}
+            onPress={() => setIsSidebarOpen(false)}
+          >
+            <Pressable
+              style={styles.mobileMenuCard}
+              onPress={(event) => event.stopPropagation()}
+            >
+              <TouchableOpacity
+                style={styles.mobileMenuRow}
+                onPress={() => {
+                  setIsSidebarOpen(false);
+                  router.push('/contact' as any);
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={styles.mobileMenuIconWrap}>
+                  <Ionicons
+                    name="chatbubble-ellipses-outline"
+                    size={20}
+                    color="#323a8f"
+                  />
+                </View>
+                <Text style={styles.mobileMenuItemText}>Contact Us</Text>
+              </TouchableOpacity>
+
+              <View style={styles.mobileMenuDivider} />
+
+              <TouchableOpacity
+                style={styles.mobileMenuRow}
+                onPress={() => {
+                  setIsSidebarOpen(false);
+                  handleLogoutPress();
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.mobileMenuIconWrap, styles.mobileMenuLogoutIcon]}>
+                  <Ionicons name="log-out-outline" size={20} color="#E53935" />
+                </View>
+                <Text style={styles.mobileMenuLogoutText}>Logout</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      ) : null}
+
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Header userName={user?.name || 'User'} />
+        <Header
+          userName={user?.name || 'User'}
+          onMenuPress={() => setIsSidebarOpen(true)}
+        />
 
         <View style={styles.cardsGrid}>
           {cards.map((card) => (
@@ -402,7 +515,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   banner: {
-    backgroundColor: '#505bd4',
+    backgroundColor: '#323a8f',
     borderRadius: 16,
     padding: 24,
     minHeight: 120,
@@ -512,6 +625,59 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)',
     marginBottom: 10,
   },
+  mobileMenuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.28)',
+    paddingTop: Platform.OS === 'ios' ? 96 : 88,
+    paddingHorizontal: 14,
+    alignItems: 'flex-start',
+  },
+  mobileMenuCard: {
+    width: 220,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E8EAF6',
+    shadowColor: '#1A237E',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 14,
+  },
+  mobileMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  mobileMenuIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileMenuLogoutIcon: {
+    backgroundColor: '#FFEBEE',
+  },
+  mobileMenuDivider: {
+    height: 1,
+    backgroundColor: '#EEF2FF',
+    marginHorizontal: 14,
+  },
+  mobileMenuItemText: {
+    color: '#323a8f',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  mobileMenuLogoutText: {
+    color: '#E53935',
+    fontSize: 15,
+    fontWeight: '700',
+  },
   desktopMain: {
     flex: 1,
     minWidth: 0,
@@ -551,6 +717,21 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.85)',
     fontSize: 14,
     fontWeight: '500',
+  },
+  desktopHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  desktopProfileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   desktopNotificationButton: {
     padding: 10,

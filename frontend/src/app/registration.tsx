@@ -4,13 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useAuth } from '@/context/AuthContext';
 import { ApiError, apiRequest } from '@/services/api';
 import { showAlert } from '@/utils/showAlert';
 
 export default function RegistrationScreen() {
   const router = useRouter();
-  const { login } = useAuth();
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
@@ -19,6 +17,13 @@ export default function RegistrationScreen() {
   const [emailValidationMessage, setEmailValidationMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    phoneNumber?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
 
   // ============================================
   // 🔽 VALIDATION FUNCTIONS
@@ -49,6 +54,7 @@ export default function RegistrationScreen() {
 
   const handleEmailChange = (text: string) => {
     setEmail(text);
+    setFieldErrors((prev) => ({ ...prev, email: undefined }));
     setEmailValidationMessage(
       text.length > 0 && !isGmailAddress(text)
         ? 'Please enter a valid Gmail address'
@@ -61,64 +67,77 @@ export default function RegistrationScreen() {
   // ============================================
 
   const handleRegister = async() => {
-    // 1. Sab fields fill hain?
-    if (!name || !phoneNumber || !email || !password || !confirmPassword) {
-      showAlert('Error', 'Please fill all fields');
-      return;
+    const nextErrors: {
+      name?: string;
+      phoneNumber?: string;
+      email?: string;
+      password?: string;
+      confirmPassword?: string;
+    } = {};
+
+    if (!name.trim()) {
+      nextErrors.name = 'Required Full Name';
     }
 
-    if (!isGmailAddress(email)) {
+    if (!phoneNumber.trim()) {
+      nextErrors.phoneNumber = 'Required Phone Number';
+    } else if (phoneNumber.length !== 11) {
+      nextErrors.phoneNumber = 'Phone number must be exactly 11 digits';
+    }
+
+    if (!email.trim()) {
+      nextErrors.email = 'Required Email';
+    } else if (!isGmailAddress(email)) {
+      nextErrors.email = 'Please enter a valid Gmail address';
       setEmailValidationMessage('Please enter a valid Gmail address');
-      showAlert(
-        'Invalid Email',
-        'Please enter a valid Gmail address ending with @gmail.com'
-      );
+    }
+
+    if (!password) {
+      nextErrors.password = 'Required Password';
+    } else if (!isPasswordValid(password)) {
+      nextErrors.password =
+        'Password must be at least 8 characters with uppercase, lowercase, and number';
+    }
+
+    if (!confirmPassword) {
+      nextErrors.confirmPassword = 'Required Confirm Password';
+    } else if (password !== confirmPassword) {
+      nextErrors.confirmPassword = 'Password does not match';
+    }
+
+    setFieldErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
-    // 2. Phone number exactly 11 digits?
-    if (phoneNumber.length !== 11) {
-      showAlert('Error', 'Phone number must be exactly 11 digits');
-      return;
-    }
+    const registeredEmail = email.trim().toLowerCase();
+    try {
+      await apiRequest('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          phoneNumber,
+          email: registeredEmail,
+          password,
+        }),
+      });
 
-    // 3. Password valid?
-    if (!isPasswordValid(password)) {
+      setPassword('');
+      setConfirmPassword('');
+      router.replace({
+        pathname: '/login',
+        params: {
+          registered: '1',
+          email: registeredEmail,
+        },
+      } as any);
+    } catch (error) {
       showAlert(
         'Error',
-        'Password must be at least 8 characters with uppercase, lowercase, and number'
+        error instanceof ApiError ? error.message : 'Could not connect to server'
       );
-      return;
     }
-
-    // 4. Password match?
-    if (password !== confirmPassword) {
-      showAlert('Error', 'Passwords do not match');
-      return;
-    }
-try {
-  await apiRequest('/api/auth/register', {
-    method: 'POST',
-    body: JSON.stringify({
-      name,
-      phoneNumber,
-      email: email.trim().toLowerCase(),
-      password,
-    }),
-  });
-
-  await login(email.trim().toLowerCase(), password);
-  setPassword('');
-  setConfirmPassword('');
-  showAlert('Registered successfully', undefined, () => {
-    router.replace('/home');
-  });
-} catch (error) {
-  showAlert(
-    'Error',
-    error instanceof ApiError ? error.message : 'Could not connect to server'
-  );
-}
   }
 
   // ============================================
@@ -141,8 +160,14 @@ try {
               placeholder="Enter your name"
               placeholderTextColor="#999"
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                setFieldErrors((prev) => ({ ...prev, name: undefined }));
+              }}
             />
+            {fieldErrors.name ? (
+              <Text style={styles.validationText}>{fieldErrors.name}</Text>
+            ) : null}
           </View>
 
           {/* Phone Number - Only Numbers, Max 11 digits */}
@@ -154,9 +179,15 @@ try {
               placeholderTextColor="#999"
               keyboardType="phone-pad"
               value={phoneNumber}
-              onChangeText={validatePhoneNumber}  // ← VALIDATION
+              onChangeText={(text) => {
+                validatePhoneNumber(text);
+                setFieldErrors((prev) => ({ ...prev, phoneNumber: undefined }));
+              }}  // ← VALIDATION
               maxLength={11}
             />
+            {fieldErrors.phoneNumber ? (
+              <Text style={styles.validationText}>{fieldErrors.phoneNumber}</Text>
+            ) : null}
           </View>
 
           {/* Email */}
@@ -171,7 +202,9 @@ try {
               value={email}
               onChangeText={handleEmailChange}
             />
-            {emailValidationMessage ? (
+            {fieldErrors.email ? (
+              <Text style={styles.validationText}>{fieldErrors.email}</Text>
+            ) : emailValidationMessage ? (
               <Text style={styles.validationText}>
                 {emailValidationMessage}
               </Text>
@@ -188,7 +221,10 @@ try {
                 placeholderTextColor="#999"
                 secureTextEntry={!showPassword}
                 value={password}
-                onChangeText={setPassword}  // ← VALIDATION
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                }}  // ← VALIDATION
               />
               <TouchableOpacity
                 style={styles.visibilityButton}
@@ -203,11 +239,13 @@ try {
                 />
               </TouchableOpacity>
             </View>
-            {password.length > 0 && !isPasswordValid(password) && (
+            {fieldErrors.password ? (
+              <Text style={styles.validationText}>{fieldErrors.password}</Text>
+            ) : password.length > 0 && !isPasswordValid(password) ? (
               <Text style={styles.validationText}>
                 Password must have uppercase, lowercase, and number
               </Text>
-            )}
+            ) : null}
           </View>
 
           {/* Confirm Password */}
@@ -220,7 +258,13 @@ try {
                 placeholderTextColor="#999"
                 secureTextEntry={!showConfirmPassword}
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    confirmPassword: undefined,
+                  }));
+                }}
               />
               <TouchableOpacity
                 style={styles.visibilityButton}
@@ -237,10 +281,13 @@ try {
                 />
               </TouchableOpacity>
             </View>
-            {/* 👇 YEH ADD KARO - Conditional Error Message */}
-  {confirmPassword.length > 0 && password !== confirmPassword && (
-    <Text style={styles.validationText}>Password does not match</Text>
-  )}
+            {fieldErrors.confirmPassword ? (
+              <Text style={styles.validationText}>
+                {fieldErrors.confirmPassword}
+              </Text>
+            ) : confirmPassword.length > 0 && password !== confirmPassword ? (
+              <Text style={styles.validationText}>Password does not match</Text>
+            ) : null}
 
             
           </View>

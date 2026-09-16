@@ -10,6 +10,7 @@ const publicRoutes = new Set([
   'registration',
   'forgot-password',
   'reset-password',
+  'verify-email',
 ]);
 
 function AuthenticatedRoutes() {

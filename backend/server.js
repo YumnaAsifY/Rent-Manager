@@ -14,8 +14,14 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const adminUserRoutes = require('./routes/adminUserRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const geocodeRoutes = require('./routes/geocodeRoutes');
+const contactRoutes = require('./routes/contactRoutes');
+const assetCategoryRoutes = require('./routes/assetCategoryRoutes');
 const { uploadsDir } = require('./middleware/uploadMiddleware');
 const User = require('./models/User');
+const {
+  seedDefaultAssetCategories,
+} = require('./controllers/assetCategoryController');
 const {
   startPaymentReminderScheduler,
 } = require('./jobs/paymentReminders');
@@ -43,6 +49,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/users', adminUserRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/geocode', geocodeRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/asset-categories', assetCategoryRoutes);
 
 app.get('/', (req, res) => {
   res.send('Rent Manager Backend is running!');
@@ -69,6 +78,9 @@ mongoose
     } else {
       console.log('ADMIN_EMAIL is not set in .env — skip admin seed');
     }
+
+    await seedDefaultAssetCategories();
+    console.log('Asset categories seeded');
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on http://localhost:${PORT}`);

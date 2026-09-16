@@ -6,10 +6,12 @@ import {
   Platform,
   useWindowDimensions,
   Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 
@@ -33,6 +35,8 @@ export default function AdminShell({
   const { logout } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
+  const [homeMenuOpen, setHomeMenuOpen] = useState(false);
+  const isAdminHome = adminTabs[0].match(pathname);
 
   const performLogout = async () => {
     try {
@@ -125,20 +129,63 @@ export default function AdminShell({
   return (
     <View style={styles.mobileShell}>
       <View style={styles.mobileHeader}>
-        <Text style={styles.mobileTitle}>{title}</Text>
-        <TouchableOpacity
-          style={styles.mobileLogoutBtn}
-          onPress={handleLogout}
-          accessibilityRole="button"
-          accessibilityLabel="Logout"
-        >
-          <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
+        {isAdminHome ? (
+          <TouchableOpacity
+            style={styles.mobileMenuBtn}
+            onPress={() => setHomeMenuOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Open menu"
+          >
+            <Ionicons name="menu" size={26} color="#FFFFFF" />
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.mobileTitle}>{title}</Text>
+        )}
       </View>
 
       <View style={styles.mobileContent}>{children}</View>
 
       {!hideBottomNav && <AdminBottomNav />}
+
+      <Modal
+        visible={homeMenuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setHomeMenuOpen(false)}
+      >
+        <Pressable
+          style={styles.menuOverlay}
+          onPress={() => setHomeMenuOpen(false)}
+        >
+          <Pressable style={styles.menuCard} onPress={() => undefined}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setHomeMenuOpen(false);
+                router.push('/admin/asset-categories' as any);
+              }}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="layers-outline" size={20} color="#323a8f" />
+              <Text style={styles.menuItemText}>Asset Category</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setHomeMenuOpen(false);
+                handleLogout();
+              }}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="log-out-outline" size={20} color="#E53935" />
+              <Text style={[styles.menuItemText, styles.menuItemDanger]}>
+                Logout
+              </Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -233,7 +280,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingTop: Platform.OS === 'ios' ? 8 : 0,
   },
   mobileTitle: {
@@ -241,13 +287,50 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
-  mobileLogoutBtn: {
+  mobileMenuBtn: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.35)',
+    paddingTop: Platform.OS === 'ios' ? 64 : 56,
+    paddingHorizontal: 12,
+    alignItems: 'flex-start',
+  },
+  menuCard: {
+    minWidth: 220,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  menuItemText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#323a8f',
+  },
+  menuItemDanger: {
+    color: '#E53935',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#EEF2FF',
+    marginHorizontal: 12,
   },
   mobileContent: {
     flex: 1,

@@ -18,6 +18,7 @@ import { useCallback, useState } from 'react';
 
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
+import ViewLocationButton from '../components/ViewLocationButton';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -337,6 +338,7 @@ export default function RentalsScreen() {
                   <Text style={styles.locationText}>
                     {rental.location || 'Location unavailable'}
                   </Text>
+                  <ViewLocationButton location={rental.location} />
                   {rental.rent ? (
                     <Text style={styles.rentText}>{rental.rent}</Text>
                   ) : null}

@@ -18,6 +18,7 @@ import { useCallback, useState } from 'react';
 
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
+import ViewLocationButton from '../components/ViewLocationButton';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -323,6 +324,7 @@ export default function RequestsScreen() {
           <Text style={styles.locationText}>
             {request.location || 'Location unavailable'}
           </Text>
+          <ViewLocationButton location={request.location} />
           <Text style={styles.dateText}>
             {request.startDate || 'N/A'} → {request.endDate || 'N/A'}
           </Text>

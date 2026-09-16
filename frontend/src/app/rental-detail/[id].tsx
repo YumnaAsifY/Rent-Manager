@@ -265,38 +265,31 @@ export default function RentalDetailScreen() {
             </View>
           ) : null}
 
-          {rental.monthlyRent != null && rental.monthlyRent > 0 ? (
+          {rental.monthlyRent != null &&
+          rental.monthlyRent > 0 &&
+          rental.canPayRent ? (
             <>
               <View style={styles.divider} />
-              {rental.canPayRent ? (
-                <>
-                  {rental.isOverdue ? (
-                    <Text style={styles.overdueText}>
-                      Your rent is overdue — pay now via Safepay.
-                    </Text>
-                  ) : null}
-                  <TouchableOpacity
-                    style={[styles.payButton, paying && styles.payButtonDisabled]}
-                    disabled={paying}
-                    onPress={() => void handlePayRent()}
-                    activeOpacity={0.85}
-                  >
-                    {paying ? (
-                      <ActivityIndicator color="#ffffff" size="small" />
-                    ) : (
-                      <>
-                        <Ionicons name="card-outline" size={18} color="#ffffff" />
-                        <Text style={styles.payButtonText}>Pay with Safepay</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </>
-              ) : rental.currentCyclePaid ? (
-                <View style={styles.paidBanner}>
-                  <Ionicons name="checkmark-circle" size={20} color="#15803D" />
-                  <Text style={styles.paidBannerText}>Paid for this month</Text>
-                </View>
+              {rental.isOverdue ? (
+                <Text style={styles.overdueText}>
+                  Your rent is overdue — pay now via Safepay.
+                </Text>
               ) : null}
+              <TouchableOpacity
+                style={[styles.payButton, paying && styles.payButtonDisabled]}
+                disabled={paying}
+                onPress={() => void handlePayRent()}
+                activeOpacity={0.85}
+              >
+                {paying ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="card-outline" size={18} color="#ffffff" />
+                    <Text style={styles.payButtonText}>Pay with Safepay</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </>
           ) : null}
         </View>
@@ -489,20 +482,6 @@ const styles = StyleSheet.create({
     color: '#B45309',
     fontWeight: '600',
     lineHeight: 18,
-  },
-  paidBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#DCFCE7',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  paidBannerText: {
-    color: '#15803D',
-    fontSize: 15,
-    fontWeight: '700',
   },
   payButton: {
     backgroundColor: '#323a8f',

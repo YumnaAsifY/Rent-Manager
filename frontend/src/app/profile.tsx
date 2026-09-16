@@ -342,24 +342,46 @@
 //     fontSize: 14,
 //   },
 // });
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Alert, Image, Modal, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Alert, Image, Modal, Platform, TextInput, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
 
-import { useAuth } from '@/context/AuthContext';
+import { PayoutMethod, useAuth } from '@/context/AuthContext';
+import { showAlert } from '@/utils/showAlert';
 
 const { width, height } = Dimensions.get('window');
 const isWeb = width > 768;
 
+const PAYOUT_OPTIONS: { key: PayoutMethod; label: string }[] = [
+  { key: 'none', label: 'None' },
+  { key: 'jazzcash', label: 'JazzCash' },
+  { key: 'easypaisa', label: 'EasyPaisa' },
+  { key: 'bank', label: 'Bank' },
+];
+
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const params = useLocalSearchParams<{ source?: string | string[] }>();
+  const source = Array.isArray(params.source) ? params.source[0] : params.source;
+  const showPayoutMethod = source !== 'header';
+  const { user, logout, updateProfile } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>(
+    user?.payoutMethod || 'none'
+  );
+  const [payoutAccountName, setPayoutAccountName] = useState(
+    user?.payoutAccountName || ''
+  );
+  const [payoutNumber, setPayoutNumber] = useState(user?.payoutNumber || '');
+  const [payoutBankName, setPayoutBankName] = useState(
+    user?.payoutBankName || ''
+  );
+  const [isSavingPayout, setIsSavingPayout] = useState(false);
 
   const performLogout = async () => {
     try {
@@ -407,11 +429,64 @@ export default function ProfileScreen() {
     }
   };
 
+  const validateWalletNumber = (text: string) => {
+    const numericText = text.replace(/[^0-9]/g, '');
+    if (numericText.length <= 11) {
+      setPayoutNumber(numericText);
+    }
+  };
+
+  const handleSavePayout = async () => {
+    if (!user) {
+      return;
+    }
+
+    if (payoutMethod !== 'none') {
+      if (!payoutAccountName.trim()) {
+        showAlert('Error', 'Please enter the account holder name.');
+        return;
+      }
+
+      if (payoutMethod === 'bank') {
+        if (!payoutBankName.trim()) {
+          showAlert('Error', 'Please enter the bank name.');
+          return;
+        }
+
+        if (payoutNumber.replace(/\s+/g, '').length < 8) {
+          showAlert('Error', 'Enter a valid bank account number or IBAN.');
+          return;
+        }
+      } else if (payoutNumber.length !== 11) {
+        showAlert('Error', 'Wallet number must be exactly 11 digits.');
+        return;
+      }
+    }
+
+    try {
+      setIsSavingPayout(true);
+      await updateProfile(user.name, user.phoneNumber, {
+        payoutMethod,
+        payoutAccountName: payoutAccountName.trim(),
+        payoutNumber: payoutNumber.replace(/\s+/g, ''),
+        payoutBankName: payoutBankName.trim(),
+      });
+      showAlert('Payout details saved');
+    } catch (error: any) {
+      showAlert(
+        'Error',
+        error?.message || 'Unable to save payout details. Please try again.'
+      );
+    } finally {
+      setIsSavingPayout(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
       
-      <ScreenHeader title="Profile" variant="dark" showBack={false} />
+      <ScreenHeader title="Profile" variant="dark" />
 
       <ScrollView 
         style={styles.scrollView}
@@ -451,18 +526,20 @@ export default function ProfileScreen() {
               <Text style={styles.profileName}>{user?.name || 'User'}</Text>
               <Text style={styles.profileEmail}>{user?.email || ''}</Text>
               <Text style={styles.profilePhone}>{user?.phoneNumber || ''}</Text>
-              {user?.payoutMethod && user.payoutMethod !== 'none' ? (
-                <Text style={styles.profilePhone}>
-                  {user.payoutMethod === 'jazzcash'
-                    ? 'JazzCash'
-                    : user.payoutMethod === 'easypaisa'
-                      ? 'EasyPaisa'
-                      : user.payoutBankName || 'Bank'}
-                  {user.payoutNumber ? ` · ${user.payoutNumber}` : ''}
-                </Text>
-              ) : (
-                <Text style={styles.profilePhone}>Payout details not saved</Text>
-              )}
+              {showPayoutMethod ? (
+                user?.payoutMethod && user.payoutMethod !== 'none' ? (
+                  <Text style={styles.profilePhone}>
+                    {user.payoutMethod === 'jazzcash'
+                      ? 'JazzCash'
+                      : user.payoutMethod === 'easypaisa'
+                        ? 'EasyPaisa'
+                        : user.payoutBankName || 'Bank'}
+                    {user.payoutNumber ? ` · ${user.payoutNumber}` : ''}
+                  </Text>
+                ) : (
+                  <Text style={styles.profilePhone}>Payout details not saved</Text>
+                )
+              ) : null}
             </View>
           </View>
         </View>
@@ -496,11 +573,120 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {Platform.OS !== 'web' ? (
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
+        {showPayoutMethod ? (
+          <View style={styles.payoutCard}>
+            <Text style={styles.payoutTitle}>Owner payout method</Text>
+            <Text style={styles.payoutHint}>
+              Admin uses this to send your rent share (JazzCash, EasyPaisa, or
+              bank).
+            </Text>
+            <View style={styles.methodRow}>
+              {PAYOUT_OPTIONS.map((option) => {
+                const active = payoutMethod === option.key;
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    style={[
+                      styles.methodChip,
+                      active && styles.methodChipActive,
+                    ]}
+                    onPress={() => setPayoutMethod(option.key)}
+                    disabled={isSavingPayout}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.methodChipText,
+                        active && styles.methodChipTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {payoutMethod !== 'none' ? (
+              <>
+                <Text style={styles.payoutLabel}>Account holder name</Text>
+                <TextInput
+                  style={styles.payoutInput}
+                  placeholder="Name on JazzCash / bank account"
+                  placeholderTextColor="#94A3B8"
+                  value={payoutAccountName}
+                  onChangeText={setPayoutAccountName}
+                  editable={!isSavingPayout}
+                  autoCapitalize="words"
+                />
+
+                {payoutMethod === 'bank' ? (
+                  <>
+                    <Text style={styles.payoutLabel}>Bank name</Text>
+                    <TextInput
+                      style={styles.payoutInput}
+                      placeholder="e.g. HBL, Meezan"
+                      placeholderTextColor="#94A3B8"
+                      value={payoutBankName}
+                      onChangeText={setPayoutBankName}
+                      editable={!isSavingPayout}
+                      autoCapitalize="words"
+                    />
+                  </>
+                ) : null}
+
+                <Text style={styles.payoutLabel}>
+                  {payoutMethod === 'bank'
+                    ? 'Account number / IBAN'
+                    : 'Wallet number'}
+                </Text>
+                <TextInput
+                  style={styles.payoutInput}
+                  placeholder={
+                    payoutMethod === 'bank'
+                      ? 'Account number or IBAN'
+                      : '11-digit wallet number'
+                  }
+                  placeholderTextColor="#94A3B8"
+                  keyboardType={
+                    payoutMethod === 'bank' ? 'default' : 'phone-pad'
+                  }
+                  value={payoutNumber}
+                  onChangeText={
+                    payoutMethod === 'bank'
+                      ? setPayoutNumber
+                      : validateWalletNumber
+                  }
+                  maxLength={payoutMethod === 'bank' ? 34 : 11}
+                  editable={!isSavingPayout}
+                  autoCapitalize="characters"
+                />
+              </>
+            ) : null}
+
+            <TouchableOpacity
+              style={[
+                styles.payoutSaveButton,
+                isSavingPayout && styles.payoutSaveButtonDisabled,
+              ]}
+              onPress={() => void handleSavePayout()}
+              disabled={isSavingPayout}
+              activeOpacity={0.85}
+            >
+              {isSavingPayout ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.payoutSaveButtonText}>
+                  Save payout method
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
         ) : null}
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -652,6 +838,88 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: '#1A1A1A',
+  },
+  payoutCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  payoutTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  payoutHint: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  methodRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  methodChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C5CAE9',
+  },
+  methodChipActive: {
+    backgroundColor: '#323a8f',
+    borderColor: '#323a8f',
+  },
+  methodChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3949AB',
+  },
+  methodChipTextActive: {
+    color: '#FFFFFF',
+  },
+  payoutLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  payoutInput: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+  },
+  payoutSaveButton: {
+    alignSelf: 'flex-start',
+    height: 40,
+    paddingHorizontal: 16,
+    backgroundColor: '#323a8f',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  payoutSaveButtonDisabled: {
+    opacity: 0.7,
+  },
+  payoutSaveButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   logoutButton: {
     backgroundColor: '#323a8f',

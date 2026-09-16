@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { sendPasswordResetEmail } = require('../utils/sendEmail');
+const { sendPasswordResetEmail, sendVerificationEmail } = require('../utils/sendEmail');
 const {
   PAYOUT_METHODS,
   serializePayout,
@@ -37,6 +37,37 @@ const isPasswordValid = (password) => {
 
 const hashResetToken = (token) => {
   return crypto.createHash('sha256').update(token).digest('hex');
+};
+
+const buildVerifyEmailLink = (rawToken) => {
+  const lanIp = process.env.LAN_IP || '10.46.204.228';
+  const expoPort = process.env.EXPO_PORT || '8081';
+  const lanBrowserVerify = `http://${lanIp}:${expoPort}/verify-email`;
+  let webVerifyBase = (
+    process.env.EMAIL_VERIFY_WEB_URL ||
+    process.env.PASSWORD_RESET_WEB_URL ||
+    lanBrowserVerify
+  )
+    .replace(/\/+$/, '')
+    .replace(/\/reset-password$/i, '/verify-email');
+
+  if (!/verify-email$/i.test(webVerifyBase)) {
+    webVerifyBase = lanBrowserVerify;
+  }
+
+  if (/localhost|127\.0\.0\.1/i.test(webVerifyBase)) {
+    webVerifyBase = lanBrowserVerify;
+  }
+
+  return `${webVerifyBase}?token=${rawToken}`;
+};
+
+const issueVerificationEmail = async (user) => {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  user.emailVerificationToken = hashResetToken(rawToken);
+  user.emailVerified = false;
+  await user.save();
+  await sendVerificationEmail(user.email, buildVerifyEmailLink(rawToken));
 };
 
 const GENERIC_RESET_MESSAGE =
@@ -91,10 +122,18 @@ const registerUser = async (req, res) => {
       password: hashedPassword,
       role: 'user',
       isActive: true,
+      emailVerified: false,
     });
+
+    try {
+      await issueVerificationEmail(user);
+    } catch (emailError) {
+      console.error('Verification email error:', emailError);
+    }
 
     res.status(201).json({
       message: 'Registration successful',
+      email: user.email,
       user: serializePublicUser(user),
     });
   } catch (error) {
@@ -143,6 +182,15 @@ const loginUser = async (req, res) => {
     if (user.isActive === false) {
       return res.status(403).json({
         message: 'This account has been deactivated',
+      });
+    }
+
+    if (user.emailVerified === false) {
+      return res.status(403).json({
+        code: 'EMAIL_NOT_VERIFIED',
+        message:
+          'Please check your registered email and verify your account before logging in.',
+        email: user.email,
       });
     }
 
@@ -488,6 +536,105 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const verifyEmail = async (req, res) => {
+  try {
+    const rawToken =
+      typeof req.query.token === 'string' ? req.query.token.trim() : '';
+
+    if (!rawToken) {
+      return res.status(400).json({
+        status: 'invalid',
+        message: 'This verification link is invalid.',
+      });
+    }
+
+    const hashedToken = hashResetToken(rawToken);
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+    }).select('+emailVerificationToken');
+
+    if (!user) {
+      return res.status(400).json({
+        status: 'invalid',
+        message: 'This verification link is invalid.',
+      });
+    }
+
+    if (user.emailVerified === true) {
+      return res.status(200).json({
+        status: 'already_verified',
+        message: 'Your email has already been verified. You can now log in.',
+        email: user.email,
+      });
+    }
+
+    user.emailVerified = true;
+    await user.save();
+
+    return res.status(200).json({
+      status: 'verified',
+      message: 'Your email has been verified successfully. You can now log in to Rent Manager.',
+      email: user.email,
+    });
+  } catch (error) {
+    console.error('Verify email error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while verifying email',
+    });
+  }
+};
+
+const resendVerificationEmail = async (req, res) => {
+  try {
+    const email =
+      typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Please enter your registered email',
+      });
+    }
+
+    const user = await User.findOne({ email }).select(
+      '+emailVerificationToken'
+    );
+
+    if (!user) {
+      return res.status(200).json({
+        message:
+          'If this email is registered and unverified, a verification link has been sent.',
+      });
+    }
+
+    if (user.emailVerified !== false) {
+      return res.status(200).json({
+        alreadyVerified: true,
+        message: 'Your email has already been verified. You can now log in.',
+      });
+    }
+
+    try {
+      await issueVerificationEmail(user);
+    } catch (emailError) {
+      console.error('Resend verification email error:', emailError);
+      return res.status(500).json({
+        message: 'Unable to send verification email. Please try again.',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'A verification link has been sent to your registered email.',
+    });
+  } catch (error) {
+    console.error('Resend verification error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while sending verification email',
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -496,4 +643,6 @@ module.exports = {
   changePassword,
   forgotPassword,
   resetPassword,
+  verifyEmail,
+  resendVerificationEmail,
 };

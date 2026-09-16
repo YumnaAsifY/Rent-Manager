@@ -5,6 +5,11 @@ const Asset = require('../models/Asset');
 const Rental = require('../models/Rental');
 const { formatPayoutForAdmin, serializePayout } = require('../utils/payout');
 
+const VERIFIED_USER_FILTER = {
+  role: { $ne: 'admin' },
+  emailVerified: { $ne: false },
+};
+
 const serializeAdminUser = (user, extra = {}) => {
   const payout = formatPayoutForAdmin(user);
 
@@ -29,7 +34,7 @@ const serializeAdminUser = (user, extra = {}) => {
 
 const getAdminUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: { $ne: 'admin' } })
+    const users = await User.find(VERIFIED_USER_FILTER)
       .sort({ createdAt: -1 })
       .select(
         'name email phoneNumber isActive deactivationReason role createdAt payoutMethod payoutAccountName payoutNumber payoutBankName'
@@ -80,10 +85,10 @@ const getAdminUserById = async (req, res) => {
     }
 
     const user = await User.findById(id).select(
-      'name email phoneNumber isActive deactivationReason role createdAt payoutMethod payoutAccountName payoutNumber payoutBankName'
+      'name email phoneNumber isActive deactivationReason role createdAt payoutMethod payoutAccountName payoutNumber payoutBankName emailVerified'
     );
 
-    if (!user || user.role === 'admin') {
+    if (!user || user.role === 'admin' || user.emailVerified === false) {
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -124,7 +129,7 @@ const setAdminUserActive = async (req, res) => {
 
     const user = await User.findById(id);
 
-    if (!user || user.role === 'admin') {
+    if (!user || user.role === 'admin' || user.emailVerified === false) {
       return res.status(404).json({ message: 'User not found' });
     }
 

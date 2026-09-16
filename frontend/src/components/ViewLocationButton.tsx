@@ -1,9 +1,9 @@
+import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  hasUsableLocation,
-  openGoogleMapsLocation,
-} from '@/utils/openGoogleMapsLocation';
+
+import LocationMapModal from './LocationMapModal';
+import { hasUsableLocation } from '@/utils/openGoogleMapsLocation';
 
 type ViewLocationButtonProps = {
   location?: string | null;
@@ -12,19 +12,31 @@ type ViewLocationButtonProps = {
 export default function ViewLocationButton({
   location,
 }: ViewLocationButtonProps) {
+  const [visible, setVisible] = useState(false);
+
   if (!hasUsableLocation(location)) {
     return null;
   }
 
   return (
-    <TouchableOpacity
-      style={styles.button}
-      onPress={() => void openGoogleMapsLocation(location)}
-      activeOpacity={0.85}
-    >
-      <Ionicons name="location" size={14} color="#FFFFFF" />
-      <Text style={styles.label}>View Location</Text>
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={(event) => {
+          event.stopPropagation();
+          setVisible(true);
+        }}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="location" size={14} color="#FFFFFF" />
+        <Text style={styles.label}>View Location</Text>
+      </TouchableOpacity>
+      <LocationMapModal
+        visible={visible}
+        location={location!.trim()}
+        onClose={() => setVisible(false)}
+      />
+    </>
   );
 }
 

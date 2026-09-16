@@ -11,11 +11,10 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 
 import BottomNavigation from '../components/BottomNavigation';
@@ -23,23 +22,44 @@ import ScreenHeader from '../components/ScreenHeader';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import { createAsset } from '@/services/assets';
-import ViewLocationButton from '../components/ViewLocationButton';
+import { fetchAssetCategories } from '@/services/assetCategories';
+import { subscribeLocationPick, consumeLocationPick } from '@/utils/locationPicker';
+import {
+  clearAddAssetDraft,
+  readAddAssetDraft,
+  writeAddAssetDraft,
+} from '@/utils/addAssetDraft';
 
 const { width } = Dimensions.get('window');
 
 export default function AddAssetScreen() {
   const router = useRouter();
   const { token } = useAuth();
-  const [assetName, setAssetName] = useState('');
-  const [assetType, setAssetType] = useState('');
-  const [location, setLocation] = useState('');
-  const [monthlyRent, setMonthlyRent] = useState('');
-  const [description, setDescription] = useState('');
-  const [image, setImage] = useState<string | null>(null);
-  const [imageMimeType, setImageMimeType] = useState<string | null>(null);
-  const [imageFileName, setImageFileName] = useState<string | null>(null);
+  const [assetName, setAssetName] = useState(
+    () => readAddAssetDraft().assetName
+  );
+  const [assetType, setAssetType] = useState(
+    () => readAddAssetDraft().assetType
+  );
+  const [location, setLocation] = useState(() => readAddAssetDraft().location);
+  const [monthlyRent, setMonthlyRent] = useState(
+    () => readAddAssetDraft().monthlyRent
+  );
+  const [description, setDescription] = useState(
+    () => readAddAssetDraft().description
+  );
+  const [image, setImage] = useState<string | null>(
+    () => readAddAssetDraft().image
+  );
+  const [imageMimeType, setImageMimeType] = useState<string | null>(
+    () => readAddAssetDraft().imageMimeType
+  );
+  const [imageFileName, setImageFileName] = useState<string | null>(
+    () => readAddAssetDraft().imageFileName
+  );
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     type?: string;
@@ -48,7 +68,73 @@ export default function AddAssetScreen() {
     image?: string;
   }>({});
 
-  const assetTypes = ['House', 'Apartment', 'Shop', 'Plot'];
+  const [assetTypes, setAssetTypes] = useState<string[]>([]);
+
+  useEffect(() => {
+    writeAddAssetDraft({
+      assetName,
+      assetType,
+      location,
+      monthlyRent,
+      description,
+      image,
+      imageMimeType,
+      imageFileName,
+    });
+  }, [
+    assetName,
+    assetType,
+    location,
+    monthlyRent,
+    description,
+    image,
+    imageMimeType,
+    imageFileName,
+  ]);
+
+  useEffect(() => {
+    return subscribeLocationPick((pickedLocation) => {
+      setLocation(pickedLocation);
+      setFieldErrors((prev) => ({ ...prev, location: undefined }));
+    });
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+
+      const pickedLocation = consumeLocationPick();
+      if (pickedLocation) {
+        setLocation(pickedLocation);
+        setFieldErrors((prev) => ({ ...prev, location: undefined }));
+      }
+
+      const loadTypes = async () => {
+        if (!token) {
+          if (mounted) {
+            setAssetTypes([]);
+          }
+          return;
+        }
+
+        try {
+          const categories = await fetchAssetCategories(token);
+          if (mounted) {
+            setAssetTypes(categories.map((category) => category.name));
+          }
+        } catch {
+          if (mounted) {
+            setAssetTypes([]);
+          }
+        }
+      };
+
+      void loadTypes();
+      return () => {
+        mounted = false;
+      };
+    }, [token])
+  );
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -91,6 +177,8 @@ export default function AddAssetScreen() {
 
     if (!assetType.trim()) {
       nextErrors.type = 'Asset type is required';
+    } else if (assetTypes.length > 0 && !assetTypes.includes(assetType)) {
+      nextErrors.type = 'Select a valid asset type';
     }
 
     if (!location.trim()) {
@@ -111,6 +199,10 @@ export default function AddAssetScreen() {
     setFieldErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
+    if (!image) {
       return;
     }
 
@@ -137,16 +229,8 @@ export default function AddAssetScreen() {
         imageFileName,
       });
 
-      const successMessage = 'Your asset successfully added';
-
-      if (Platform.OS === 'web') {
-        window.alert(successMessage);
-        router.back();
-      } else {
-        Alert.alert('Success', successMessage, [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
-      }
+      setShowSuccess(true);
+      clearAddAssetDraft();
     } catch (error) {
       const message =
         error instanceof ApiError
@@ -180,7 +264,6 @@ export default function AddAssetScreen() {
               setAssetName(text);
               setFieldErrors((prev) => ({ ...prev, name: undefined }));
             }}
-            editable={!isSubmitting}
           />
           {fieldErrors.name ? (
             <Text style={styles.fieldErrorText}>{fieldErrors.name}</Text>
@@ -215,9 +298,31 @@ export default function AddAssetScreen() {
               setLocation(text);
               setFieldErrors((prev) => ({ ...prev, location: undefined }));
             }}
-            editable={!isSubmitting}
           />
-          <ViewLocationButton location={location} />
+          <TouchableOpacity
+            style={styles.mapButton}
+            onPress={() => {
+              writeAddAssetDraft({
+                assetName,
+                assetType,
+                location,
+                monthlyRent,
+                description,
+                image,
+                imageMimeType,
+                imageFileName,
+              });
+              router.push({
+                pathname: '/select-location',
+                params: location.trim() ? { q: location.trim() } : {},
+              } as any);
+            }}
+            disabled={isSubmitting}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="map-outline" size={16} color="#FFFFFF" />
+            <Text style={styles.mapButtonText}>Select Location on Map</Text>
+          </TouchableOpacity>
           {fieldErrors.location ? (
             <Text style={styles.fieldErrorText}>{fieldErrors.location}</Text>
           ) : null}
@@ -235,7 +340,6 @@ export default function AddAssetScreen() {
               setMonthlyRent(text);
               setFieldErrors((prev) => ({ ...prev, rent: undefined }));
             }}
-            editable={!isSubmitting}
           />
           {fieldErrors.rent ? (
             <Text style={styles.fieldErrorText}>{fieldErrors.rent}</Text>
@@ -253,7 +357,6 @@ export default function AddAssetScreen() {
             textAlignVertical="top"
             value={description}
             onChangeText={setDescription}
-            editable={!isSubmitting}
           />
         </View>
 
@@ -298,6 +401,29 @@ export default function AddAssetScreen() {
       <BottomNavigation />
 
       <Modal
+        visible={showSuccess}
+        transparent
+        animationType="fade"
+        onRequestClose={() => router.back()}
+      >
+        <View style={styles.successOverlay}>
+          <View style={styles.successCard}>
+            <View style={styles.successIconWrap}>
+              <Ionicons name="checkmark" size={36} color="#FFFFFF" />
+            </View>
+            <Text style={styles.successTitle}>Asset Added Successfully!</Text>
+            <TouchableOpacity
+              style={styles.successButton}
+              onPress={() => router.back()}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.successButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
         visible={dropdownVisible}
         transparent={true}
         animationType="fade"
@@ -309,7 +435,12 @@ export default function AddAssetScreen() {
           onPress={() => setDropdownVisible(false)}
         >
           <View style={styles.modalContent}>
-            {assetTypes.map((type) => (
+            {assetTypes.length === 0 ? (
+              <Text style={styles.modalEmptyText}>
+                No asset types available. Ask admin to add a category.
+              </Text>
+            ) : (
+              assetTypes.map((type) => (
               <TouchableOpacity
                 key={type}
                 style={[
@@ -334,7 +465,8 @@ export default function AddAssetScreen() {
                   <Ionicons name="checkmark" size={20} color="#323a8f" />
                 )}
               </TouchableOpacity>
-            ))}
+              ))
+            )}
           </View>
         </TouchableOpacity>
       </Modal>
@@ -424,6 +556,17 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     marginTop: 6,
   },
+  mapButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#323a8f',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+  },
   bottomSpacing: {
     height: 20,
   },
@@ -452,11 +595,61 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  mapButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  successOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  successCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  successIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#22C55E',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  successTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  successButton: {
+    minWidth: 120,
+    backgroundColor: '#323a8f',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+  },
+  successButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
@@ -488,5 +681,12 @@ const styles = StyleSheet.create({
   modalItemTextActive: {
     color: '#323a8f',
     fontWeight: '600',
+  },
+  modalEmptyText: {
+    fontSize: 14,
+    color: '#64748B',
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    textAlign: 'center',
   },
 });

@@ -9,6 +9,7 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  TextInput,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
+import ViewLocationButton from '../components/ViewLocationButton';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -23,19 +25,10 @@ import {
   fetchExploreAssets,
   getAssetImageUrl,
 } from '@/services/rentalRequests';
+import { fetchAssetCategories } from '@/services/assetCategories';
 
 const { width, height } = Dimensions.get('window');
 const isWeb = width > 768;
-
-const TYPE_FILTERS = [
-  'View All',
-  'Plot',
-  'Apartment',
-  'House',
-  'Shop',
-] as const;
-
-type TypeFilter = (typeof TYPE_FILTERS)[number];
 
 export default function ExploreAssetsScreen() {
   const router = useRouter();
@@ -43,7 +36,9 @@ export default function ExploreAssetsScreen() {
   const [assets, setAssets] = useState<ExploreAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const [selectedType, setSelectedType] = useState<TypeFilter>('View All');
+  const [typeFilters, setTypeFilters] = useState<string[]>(['View All']);
+  const [selectedType, setSelectedType] = useState('View All');
+  const [cityQuery, setCityQuery] = useState('');
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const loadAssets = useCallback(async () => {
@@ -70,6 +65,19 @@ export default function ExploreAssetsScreen() {
     } finally {
       setLoading(false);
     }
+
+    try {
+      const categories = await fetchAssetCategories(token);
+      const names = categories.map((category) => category.name);
+      setTypeFilters(['View All', ...names]);
+      setSelectedType((current) =>
+        current === 'View All' || names.includes(current)
+          ? current
+          : 'View All'
+      );
+    } catch {
+      setTypeFilters(['View All']);
+    }
   }, [token]);
 
   useFocusEffect(
@@ -79,14 +87,23 @@ export default function ExploreAssetsScreen() {
   );
 
   const filteredAssets = useMemo(() => {
-    if (selectedType === 'View All') {
-      return assets;
+    const city = cityQuery.trim().toLowerCase();
+    const byType =
+      selectedType === 'View All'
+        ? assets
+        : assets.filter(
+            (asset) =>
+              asset.type.trim().toLowerCase() === selectedType.toLowerCase()
+          );
+
+    if (selectedType === 'View All' || !city) {
+      return byType;
     }
 
-    return assets.filter(
-      (asset) => asset.type.trim().toLowerCase() === selectedType.toLowerCase()
+    return byType.filter((asset) =>
+      (asset.location || '').toLowerCase().includes(city)
     );
-  }, [assets, selectedType]);
+  }, [assets, selectedType, cityQuery]);
 
   const getStatusColor = (status: string) => {
     if (status === 'Available') return '#22C55E';
@@ -122,7 +139,7 @@ export default function ExploreAssetsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
         >
-          {TYPE_FILTERS.map((type) => {
+          {typeFilters.map((type) => {
             const isActive = selectedType === type;
 
             return (
@@ -147,6 +164,20 @@ export default function ExploreAssetsScreen() {
             );
           })}
         </ScrollView>
+        {selectedType !== 'View All' ? (
+          <View style={styles.citySearchWrap}>
+            <Ionicons name="search-outline" size={18} color="#64748B" />
+            <TextInput
+              style={styles.citySearchInput}
+              placeholder={`Search ${selectedType.toLowerCase()}s by city...`}
+              placeholderTextColor="#94A3B8"
+              value={cityQuery}
+              onChangeText={setCityQuery}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+          </View>
+        ) : null}
       </View>
 
       <ScrollView
@@ -170,7 +201,9 @@ export default function ExploreAssetsScreen() {
             <Text style={styles.emptyText}>
               {assets.length === 0
                 ? 'No assets available.'
-                : `No ${selectedType} assets found.`}
+                : cityQuery.trim()
+                  ? `No ${selectedType} assets found in ${cityQuery.trim()}.`
+                  : `No ${selectedType} assets found.`}
             </Text>
           </View>
         ) : (
@@ -241,6 +274,7 @@ export default function ExploreAssetsScreen() {
                   </View>
                   <Text style={styles.typeText}>{asset.type}</Text>
                   <Text style={styles.locationText}>{asset.location}</Text>
+                  <ViewLocationButton location={asset.location} />
                   {asset.rent ? (
                     <Text style={styles.rentText}>{asset.rent}</Text>
                   ) : null}
@@ -331,6 +365,25 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: '#FFFFFF',
+  },
+  citySearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    marginRight: 20,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  citySearchInput: {
+    flex: 1,
+    height: 44,
+    fontSize: 15,
+    color: '#1A1A1A',
   },
   scrollView: {
     flex: 1,
