@@ -30,11 +30,50 @@ export default function RegistrationScreen() {
   // ============================================
 
   // Sirf numbers allow karo, max 11 digits
-  const validatePhoneNumber = (text: string) => {
-    const numericText = text.replace(/[^0-9]/g, '');
-    if (numericText.length <= 11) {
-      setPhoneNumber(numericText);
+  const validateName = (text: string) => {
+    setName(text.replace(/[^A-Za-z,. ]/g, ''));
+    setFieldErrors((prev) => ({ ...prev, name: undefined }));
+  };
+
+  const formatPkPhone = (text: string) => {
+    const digits = text.replace(/\D/g, '');
+
+    if (!digits) {
+      return '';
     }
+
+    if (digits.startsWith('9')) {
+      if (digits.length === 1) {
+        return '9';
+      }
+      if (digits[1] !== '2') {
+        return '9';
+      }
+      if (digits.length === 2) {
+        return '+92';
+      }
+      if (digits[2] !== '3') {
+        return '+92';
+      }
+      return `+${digits.slice(0, 12)}`;
+    }
+
+    if (digits.startsWith('0')) {
+      if (digits.length === 1) {
+        return '0';
+      }
+      if (digits[1] !== '3') {
+        return '0';
+      }
+      return digits.slice(0, 11);
+    }
+
+    return '';
+  };
+
+  const validatePhoneNumber = (text: string) => {
+    setPhoneNumber(formatPkPhone(text));
+    setFieldErrors((prev) => ({ ...prev, phoneNumber: undefined }));
   };
 
   // Password validation check
@@ -53,12 +92,27 @@ export default function RegistrationScreen() {
   };
 
   const handleEmailChange = (text: string) => {
+    if (/[A-Z]/.test(text)) {
+      setEmail(text.replace(/[A-Z]/g, ''));
+      setFieldErrors((prev) => ({ ...prev, email: 'Enter lower case letter' }));
+      setEmailValidationMessage('');
+      return;
+    }
+
     setEmail(text);
     setFieldErrors((prev) => ({ ...prev, email: undefined }));
     setEmailValidationMessage(
       text.length > 0 && !isGmailAddress(text)
         ? 'Please enter a valid Gmail address'
         : ''
+    );
+  };
+
+  const handleEmailBlur = () => {
+    setFieldErrors((prev) =>
+      prev.email === 'Enter lower case letter'
+        ? { ...prev, email: undefined }
+        : prev
     );
   };
 
@@ -77,16 +131,26 @@ export default function RegistrationScreen() {
 
     if (!name.trim()) {
       nextErrors.name = 'Required Full Name';
+    } else if (
+      !/^[A-Za-z., ]+$/.test(name.trim()) ||
+      !/[A-Za-z]/.test(name)
+    ) {
+      nextErrors.name = 'Name can contain letters, comma and dot only';
     }
 
     if (!phoneNumber.trim()) {
       nextErrors.phoneNumber = 'Required Phone Number';
-    } else if (phoneNumber.length !== 11) {
-      nextErrors.phoneNumber = 'Phone number must be exactly 11 digits';
+    } else if (
+      !/^03\d{9}$/.test(phoneNumber) &&
+      !/^\+923\d{9}$/.test(phoneNumber)
+    ) {
+      nextErrors.phoneNumber = 'Enter a valid 11-digit Pakistan phone number';
     }
 
     if (!email.trim()) {
       nextErrors.email = 'Required Email';
+    } else if (/[A-Z]/.test(email)) {
+      nextErrors.email = 'Enter lower case letter';
     } else if (!isGmailAddress(email)) {
       nextErrors.email = 'Please enter a valid Gmail address';
       setEmailValidationMessage('Please enter a valid Gmail address');
@@ -116,7 +180,7 @@ export default function RegistrationScreen() {
       await apiRequest('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify({
-          name,
+          name: name.trim(),
           phoneNumber,
           email: registeredEmail,
           password,
@@ -159,11 +223,9 @@ export default function RegistrationScreen() {
               style={styles.input}
               placeholder="Enter your name"
               placeholderTextColor="#999"
+              autoCapitalize="words"
               value={name}
-              onChangeText={(text) => {
-                setName(text);
-                setFieldErrors((prev) => ({ ...prev, name: undefined }));
-              }}
+              onChangeText={validateName}
             />
             {fieldErrors.name ? (
               <Text style={styles.validationText}>{fieldErrors.name}</Text>
@@ -175,15 +237,12 @@ export default function RegistrationScreen() {
             <Text style={styles.label}>Phone Number</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter 11-digit phone number"
+              placeholder="03xxxxxxxxx or +923xxxxxxxxx"
               placeholderTextColor="#999"
               keyboardType="phone-pad"
               value={phoneNumber}
-              onChangeText={(text) => {
-                validatePhoneNumber(text);
-                setFieldErrors((prev) => ({ ...prev, phoneNumber: undefined }));
-              }}  // ← VALIDATION
-              maxLength={11}
+              onChangeText={validatePhoneNumber}
+              maxLength={13}
             />
             {fieldErrors.phoneNumber ? (
               <Text style={styles.validationText}>{fieldErrors.phoneNumber}</Text>
@@ -199,8 +258,10 @@ export default function RegistrationScreen() {
               placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               value={email}
               onChangeText={handleEmailChange}
+              onBlur={handleEmailBlur}
             />
             {fieldErrors.email ? (
               <Text style={styles.validationText}>{fieldErrors.email}</Text>
@@ -233,7 +294,7 @@ export default function RegistrationScreen() {
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
               >
                 <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                   size={22}
                   color="#666666"
                 />
@@ -275,7 +336,7 @@ export default function RegistrationScreen() {
                 }
               >
                 <Ionicons
-                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
                   size={22}
                   color="#666666"
                 />

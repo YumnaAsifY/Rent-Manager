@@ -62,10 +62,30 @@ const buildVerifyEmailLink = (rawToken) => {
   return `${webVerifyBase}?token=${rawToken}`;
 };
 
+const VERIFICATION_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+const getVerificationExpiry = (user) => {
+  if (user.emailVerificationExpires) {
+    return new Date(user.emailVerificationExpires);
+  }
+  if (user.createdAt) {
+    return new Date(new Date(user.createdAt).getTime() + VERIFICATION_WINDOW_MS);
+  }
+  return new Date(0);
+};
+
+const isUnverifiedExpired = (user) => {
+  if (!user || user.emailVerified === true) {
+    return false;
+  }
+  return getVerificationExpiry(user).getTime() <= Date.now();
+};
+
 const issueVerificationEmail = async (user) => {
   const rawToken = crypto.randomBytes(32).toString('hex');
   user.emailVerificationToken = hashResetToken(rawToken);
   user.emailVerified = false;
+  user.emailVerificationExpires = new Date(Date.now() + VERIFICATION_WINDOW_MS);
   await user.save();
   await sendVerificationEmail(user.email, buildVerifyEmailLink(rawToken));
 };
@@ -97,20 +117,37 @@ const registerUser = async (req, res) => {
       });
     }
 
-    const existingEmail = await User.findOne({ email: normalizedEmail });
+    const existingEmail = await User.findOne({ email: normalizedEmail }).select(
+      '+emailVerificationExpires'
+    );
 
     if (existingEmail) {
-      return res.status(400).json({
-        message: 'Email is already registered',
-      });
+      if (existingEmail.emailVerified !== true && isUnverifiedExpired(existingEmail)) {
+        await User.deleteOne({ _id: existingEmail._id });
+      } else if (existingEmail.emailVerified !== true) {
+        return res.status(400).json({
+          message:
+            'Email already exists and is pending. Please verify this registered email.',
+        });
+      } else {
+        return res.status(400).json({
+          message: 'Email is already registered',
+        });
+      }
     }
 
-    const existingPhone = await User.findOne({ phoneNumber });
+    const existingPhone = await User.findOne({ phoneNumber }).select(
+      '+emailVerificationExpires'
+    );
 
     if (existingPhone) {
-      return res.status(400).json({
-        message: 'Phone number is already registered',
-      });
+      if (existingPhone.emailVerified !== true && isUnverifiedExpired(existingPhone)) {
+        await User.deleteOne({ _id: existingPhone._id });
+      } else {
+        return res.status(400).json({
+          message: 'Phone number is already registered',
+        });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -159,7 +196,7 @@ const loginUser = async (req, res) => {
       typeof email === 'string' ? email.trim().toLowerCase() : '';
 
     const user = await User.findOne({ email: normalizedEmail }).select(
-      '+password'
+      '+password +emailVerificationExpires'
     );
 
     if (!user) {
@@ -186,6 +223,15 @@ const loginUser = async (req, res) => {
     }
 
     if (user.emailVerified === false) {
+      if (isUnverifiedExpired(user)) {
+        return res.status(403).json({
+          code: 'VERIFICATION_EXPIRED',
+          message:
+            'Your verification link has expired. Please register again with this email.',
+          email: user.email,
+        });
+      }
+
       return res.status(403).json({
         code: 'EMAIL_NOT_VERIFIED',
         message:
@@ -551,11 +597,12 @@ const verifyEmail = async (req, res) => {
     const hashedToken = hashResetToken(rawToken);
     const user = await User.findOne({
       emailVerificationToken: hashedToken,
-    }).select('+emailVerificationToken');
+    }).select('+emailVerificationToken +emailVerificationExpires');
 
     if (!user) {
       return res.status(400).json({
         status: 'invalid',
+        code: 'INVALID_VERIFICATION_LINK',
         message: 'This verification link is invalid.',
       });
     }
@@ -568,7 +615,18 @@ const verifyEmail = async (req, res) => {
       });
     }
 
+    if (isUnverifiedExpired(user)) {
+      return res.status(400).json({
+        status: 'expired',
+        code: 'VERIFICATION_EXPIRED',
+        message:
+          'This verification link has expired. Please register again with this email.',
+      });
+    }
+
     user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
     await user.save();
 
     return res.status(200).json({
@@ -597,7 +655,7 @@ const resendVerificationEmail = async (req, res) => {
     }
 
     const user = await User.findOne({ email }).select(
-      '+emailVerificationToken'
+      '+emailVerificationToken +emailVerificationExpires'
     );
 
     if (!user) {
@@ -611,6 +669,14 @@ const resendVerificationEmail = async (req, res) => {
       return res.status(200).json({
         alreadyVerified: true,
         message: 'Your email has already been verified. You can now log in.',
+      });
+    }
+
+    if (isUnverifiedExpired(user)) {
+      return res.status(400).json({
+        code: 'VERIFICATION_EXPIRED',
+        message:
+          'Your verification link has expired. Please register again with this email.',
       });
     }
 

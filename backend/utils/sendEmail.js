@@ -44,12 +44,13 @@ const sendVerificationEmail = async (to, verifyLink) => {
     from: process.env.EMAIL_FROM || process.env.SMTP_USER,
     to,
     subject: 'Verify your Rent Manager email',
-    text: `You registered on Rent Manager with this email address (${to}).\n\nPlease verify this email to confirm that the account belongs to you. You cannot log in until your email is verified.\n\nOpen this email on your phone or computer and tap Verify Email.\n\nIf you did not create this account, you can ignore this email.`,
+    text: `You registered on Rent Manager with this email address (${to}).\n\nPlease verify this email to confirm that the account belongs to you. You cannot log in until your email is verified.\n\nThis verification link expires in 24 hours.\n\nOpen this email on your phone or computer and tap Verify Email.\n\nIf you did not create this account, you can ignore this email.`,
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1A1A1A;">
         <p>You registered on <strong>Rent Manager</strong> using this email address:</p>
         <p><strong>${to}</strong></p>
         <p>Please verify this email to confirm that the account belongs to you. You cannot log in until your email is verified.</p>
+        <p><strong>This verification link expires in 24 hours.</strong></p>
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:20px 0;">
           <tr>
             <td align="center" bgcolor="#323a8f" style="border-radius:8px;">

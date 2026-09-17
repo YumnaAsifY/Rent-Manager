@@ -73,6 +73,8 @@ export default function LoginScreen() {
     const nextErrors: { email?: string; password?: string } = {};
     if (!email.trim()) {
       nextErrors.email = 'Required Email';
+    } else if (/[A-Z]/.test(email)) {
+      nextErrors.email = 'Enter lower case letter';
     }
     if (!password) {
       nextErrors.password = 'Required Password';
@@ -102,6 +104,14 @@ export default function LoginScreen() {
       ) {
         setVerificationPendingEmail(email.trim().toLowerCase());
         setShowPendingModal(true);
+      } else if (
+        error instanceof ApiError &&
+        error.code === 'VERIFICATION_EXPIRED'
+      ) {
+        setLoginError(
+          error.message ||
+            'Your verification link has expired. Please register again with this email.'
+        );
       } else if (error instanceof ApiError) {
         setLoginError(
           error.status === 403
@@ -133,11 +143,29 @@ export default function LoginScreen() {
               placeholder="Enter your email"
               placeholderTextColor="#999"
               keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
               value={email}
               onChangeText={(text) => {
+                if (/[A-Z]/.test(text)) {
+                  setEmail(text.replace(/[A-Z]/g, ''));
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    email: 'Enter lower case letter',
+                  }));
+                  setLoginError('');
+                  return;
+                }
                 setEmail(text);
                 setLoginError('');
                 setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              }}
+              onBlur={() => {
+                setFieldErrors((prev) =>
+                  prev.email === 'Enter lower case letter'
+                    ? { ...prev, email: undefined }
+                    : prev
+                );
               }}
             />
             {fieldErrors.email ? (
@@ -167,7 +195,7 @@ export default function LoginScreen() {
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
               >
                 <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                   size={22}
                   color="#666666"
                 />

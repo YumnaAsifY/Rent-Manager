@@ -11,7 +11,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import CenteredStatusModal from '../components/CenteredStatusModal';
 import { ApiError, apiRequest } from '@/services/api';
 
-type VerifyStatus = 'loading' | 'verified' | 'already_verified' | 'invalid';
+type VerifyStatus =
+  | 'loading'
+  | 'verified'
+  | 'already_verified'
+  | 'expired'
+  | 'invalid';
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
@@ -41,7 +46,14 @@ export default function VerifyEmailScreen() {
         }
 
         setStatus('verified');
-      } catch {
+      } catch (error) {
+        if (
+          error instanceof ApiError &&
+          error.code === 'VERIFICATION_EXPIRED'
+        ) {
+          setStatus('expired');
+          return;
+        }
         setStatus('invalid');
       }
     };
@@ -118,6 +130,21 @@ export default function VerifyEmailScreen() {
           message="Your email has already been verified. You can now log in."
           buttonLabel="Go to Login"
           onButtonPress={goToLogin}
+        />
+      </View>
+    );
+  }
+
+  if (status === 'expired') {
+    return (
+      <View style={styles.page}>
+        <CenteredStatusModal
+          visible
+          variant="error"
+          title="Verification Link Expired"
+          message="This verification link has expired. Please register again with this email."
+          buttonLabel="Go to Register"
+          onButtonPress={() => router.replace('/registration' as any)}
         />
       </View>
     );
