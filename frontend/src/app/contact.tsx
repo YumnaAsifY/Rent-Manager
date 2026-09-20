@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import BottomNavigation from '../components/BottomNavigation';
 import CenteredStatusModal from '../components/CenteredStatusModal';
 import ScreenHeader from '../components/ScreenHeader';
+import LiftPressable from '../components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError, apiRequest } from '@/services/api';
 
@@ -234,11 +235,10 @@ export default function ContactUsScreen() {
             <Text style={styles.sendErrorText}>{sendError}</Text>
           ) : null}
 
-          <TouchableOpacity
+          <LiftPressable
             style={[styles.sendButton, isSending && styles.sendButtonDisabled]}
             onPress={() => void handleSend()}
             disabled={isSending}
-            activeOpacity={0.85}
           >
             {isSending ? (
               <ActivityIndicator color="#FFFFFF" />
@@ -248,7 +248,7 @@ export default function ContactUsScreen() {
                 <Text style={styles.sendButtonText}>Send Message</Text>
               </>
             )}
-          </TouchableOpacity>
+          </LiftPressable>
         </View>
       </ScrollView>
 

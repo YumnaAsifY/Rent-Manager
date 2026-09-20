@@ -17,6 +17,7 @@ import { useCallback, useState } from 'react';
 
 import BottomNavigation from '../../components/BottomNavigation';
 import ScreenHeader from '../../components/ScreenHeader';
+import LiftPressable from '../../components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -377,7 +378,7 @@ export default function RequestDetailsScreen() {
                   >
                     <Text style={styles.rejectButtonText}>Reject</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
+                  <LiftPressable
                     style={[styles.acceptButton, isUpdating && styles.disabled]}
                     onPress={handleAccept}
                     disabled={isUpdating}
@@ -387,7 +388,7 @@ export default function RequestDetailsScreen() {
                     ) : (
                       <Text style={styles.acceptButtonText}>Accept</Text>
                     )}
-                  </TouchableOpacity>
+                  </LiftPressable>
                 </View>
               ) : (
                 <Text style={styles.phaseNote}>
@@ -448,12 +449,12 @@ export default function RequestDetailsScreen() {
                   : `This request was ${request.status.toLowerCase()}.`}
               </Text>
               {request.status === 'Accepted' ? (
-                <TouchableOpacity
+                <LiftPressable
                   style={styles.linkButton}
                   onPress={() => router.push('/rentals' as any)}
                 >
                   <Text style={styles.linkButtonText}>Open My Rentals</Text>
-                </TouchableOpacity>
+                </LiftPressable>
               ) : null}
             </>
           )}

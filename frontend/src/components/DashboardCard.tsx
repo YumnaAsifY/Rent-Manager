@@ -99,9 +99,10 @@
 //     marginBottom: 12,
 //   },
 // });
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import StatusBadge from './StatusBadge';
+import LiftPressable from './LiftPressable';
 
 const { width } = Dimensions.get('window');
 const isTablet = width > 350;
@@ -118,6 +119,7 @@ interface DashboardCardProps {
   iconBg?: string;
   desktop?: boolean;
   showViewDetails?: boolean;
+  liftOnInteract?: boolean;
 }
 
 export default function DashboardCard({
@@ -132,17 +134,18 @@ export default function DashboardCard({
   iconBg = '#e3f2fd',
   desktop = false,
   showViewDetails = false,
+  liftOnInteract = false,
 }: DashboardCardProps) {
   return (
-    <TouchableOpacity 
+    <LiftPressable
+      lift={liftOnInteract}
       style={[
         styles.card,
         isTablet && styles.cardTablet,
         desktop && styles.cardDesktop,
         { backgroundColor: cardBg },
-      ]} 
+      ]}
       onPress={onPress}
-      activeOpacity={0.8}
     >
       <View style={styles.cardHeader}>
         <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
@@ -166,7 +169,7 @@ export default function DashboardCard({
           />
         </View>
       ) : null}
-    </TouchableOpacity>
+    </LiftPressable>
   );
 }
 

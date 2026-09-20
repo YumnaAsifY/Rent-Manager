@@ -50,7 +50,7 @@ const paymentSchema = new mongoose.Schema(
       uppercase: true,
     },
 
-    /** Snapshot at payment time (e.g. 10). */
+    /** Snapshot at payment time (e.g. 3). */
     adminProfitPercent: {
       type: Number,
       required: true,

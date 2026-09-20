@@ -9,12 +9,30 @@ export type AppNotification = {
   relatedAssetId: string | null;
   relatedRentalId?: string | null;
   relatedPaymentId?: string | null;
+  cancellationReason?: string;
+  cancellationOwnerName?: string;
+  cancellationAssetName?: string;
+  cancellationAssetType?: string;
+  cancellationAssetLocation?: string;
   audience?: 'tenant' | 'owner' | null;
   isRead: boolean;
   read: boolean;
   createdAt?: string;
   time: string;
 };
+
+export async function fetchNotificationById(
+  token: string,
+  notificationId: string
+): Promise<AppNotification> {
+  const data = await apiRequest<{ notification: AppNotification }>(
+    `/api/notifications/${notificationId}`,
+    { method: 'GET' },
+    token
+  );
+
+  return data.notification;
+}
 
 export async function fetchMyNotifications(
   token: string

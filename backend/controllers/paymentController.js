@@ -141,6 +141,8 @@ const serializeHistoryPayment = (payment, userId) => {
     ownerName: owner?.name || 'Unknown owner',
     totalAmount: payment.totalAmount,
     ownerShareAmount: payment.ownerShareAmount,
+    adminProfitPercent: payment.adminProfitPercent,
+    adminProfitAmount: payment.adminProfitAmount,
     status: payment.status,
     paidAt: payment.paidAt,
     settledAt: payment.settledAt,
@@ -162,17 +164,35 @@ const notifyOwnerPaymentReceived = async (payment) => {
 
   const tenantName = populated.tenant?.name || 'The tenant';
   const assetName = populated.asset?.name || 'your property';
+  const ownerId = populated.owner?._id || populated.owner;
+  const tenantId = populated.tenant?._id || populated.tenant;
+  const assetId = populated.asset?._id || populated.asset;
 
-  await createNotification({
-    recipient: populated.owner._id || populated.owner,
-    type: 'payment_received',
-    title: 'Payment received',
-    message: `${tenantName} paid rent for ${assetName}. Admin will settle your share.`,
-    relatedAsset: populated.asset._id || populated.asset,
-    relatedRental: populated.rental,
-    relatedPayment: populated._id,
-    audience: 'owner',
-  });
+  if (ownerId) {
+    await createNotification({
+      recipient: ownerId,
+      type: 'payment_received',
+      title: 'Payment received',
+      message: `${tenantName} paid rent for ${assetName}. Admin will settle your share.`,
+      relatedAsset: assetId,
+      relatedRental: populated.rental,
+      relatedPayment: populated._id,
+      audience: 'owner',
+    });
+  }
+
+  if (tenantId) {
+    await createNotification({
+      recipient: tenantId,
+      type: 'payment_sent_to_admin',
+      title: 'Rent sent to admin',
+      message: `Your rent for ${assetName} has been sent to admin.`,
+      relatedAsset: assetId,
+      relatedRental: populated.rental,
+      relatedPayment: populated._id,
+      audience: 'tenant',
+    });
+  }
 };
 
 const notifyOwnerPaymentSettled = async (payment) => {

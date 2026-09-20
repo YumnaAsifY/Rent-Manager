@@ -17,6 +17,7 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import AdminShell from '@/components/admin/AdminShell';
+import LiftPressable from '@/components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -144,18 +145,17 @@ export default function AdminAssetCategoriesScreen() {
     <AdminShell title="Asset Categories">
       <View style={styles.flex}>
         <View style={[styles.toolbar, isDesktop && styles.toolbarDesktop]}>
-          <TouchableOpacity
+          <LiftPressable
             style={styles.addButton}
             onPress={() => {
               setFormError('');
               setNewName('');
               setAddOpen(true);
             }}
-            activeOpacity={0.85}
           >
             <Ionicons name="add" size={20} color="#FFFFFF" />
             <Text style={styles.addButtonText}>Add Category</Text>
-          </TouchableOpacity>
+          </LiftPressable>
         </View>
 
         <ScrollView
@@ -276,7 +276,7 @@ export default function AdminAssetCategoriesScreen() {
               >
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              <LiftPressable
                 style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
                 onPress={() => void handleAdd()}
                 disabled={saving}
@@ -284,7 +284,7 @@ export default function AdminAssetCategoriesScreen() {
                 <Text style={styles.saveText}>
                   {saving ? 'Saving...' : 'Save'}
                 </Text>
-              </TouchableOpacity>
+              </LiftPressable>
             </View>
           </Pressable>
         </Pressable>

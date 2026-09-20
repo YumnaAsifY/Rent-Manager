@@ -16,6 +16,7 @@ import { useCallback, useState } from 'react';
 
 import BottomNavigation from '../../components/BottomNavigation';
 import ScreenHeader from '../../components/ScreenHeader';
+import LiftPressable from '../../components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import { Rental, fetchMyRentals } from '@/services/rentals';
@@ -195,6 +196,11 @@ export default function PaymentScreen() {
             ? `Your share: Rs. ${item.ownerShareAmount.toLocaleString('en-PK')}`
             : `Amount: Rs. ${item.totalAmount.toLocaleString('en-PK')}`}
         </Text>
+        <Text style={styles.feeNote}>
+          {item.viewerRole === 'owner'
+            ? `After ${item.adminProfitPercent ?? 3}% platform fee`
+            : `Includes ${item.adminProfitPercent ?? 3}% platform fee`}
+        </Text>
 
         <Text style={styles.historyDate}>Paid: {item.paidDate || '—'}</Text>
         {item.settledDate ? (
@@ -323,6 +329,9 @@ export default function PaymentScreen() {
                             ? `Rs. ${rental.monthlyRent.toLocaleString('en-PK')} / month`
                             : 'Rent not set')}
                       </Text>
+                      <Text style={styles.feeNote}>
+                        A 3% platform fee is included. The owner receives 97%.
+                      </Text>
                       {rental.isOverdue ? (
                         <Text style={styles.overdueText}>
                           Your rent is overdue — pay now via Safepay.
@@ -330,14 +339,13 @@ export default function PaymentScreen() {
                       ) : null}
                     </View>
 
-                    <TouchableOpacity
+                    <LiftPressable
                       style={[
                         styles.payButton,
                         isPaying && styles.payButtonDisabled,
                       ]}
                       disabled={Boolean(payingRentalId)}
                       onPress={() => void handlePay(rental)}
-                      activeOpacity={0.85}
                     >
                       {isPaying ? (
                         <ActivityIndicator color="#ffffff" size="small" />
@@ -353,7 +361,7 @@ export default function PaymentScreen() {
                           </Text>
                         </>
                       )}
-                    </TouchableOpacity>
+                    </LiftPressable>
                   </View>
                 );
               })
@@ -523,6 +531,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#323a8f',
+  },
+  feeNote: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 17,
   },
   overdueText: {
     marginTop: 10,

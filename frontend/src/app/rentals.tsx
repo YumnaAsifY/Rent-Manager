@@ -80,10 +80,12 @@ export default function RentalsScreen() {
     }, [loadRentals])
   );
 
-  const expiredRentals = rentals.filter((rental) => rental.status === 'Expired');
-  const allExpiredSelected =
-    expiredRentals.length > 0 &&
-    selectedIds.length === expiredRentals.length;
+  const removableRentals = rentals.filter(
+    (rental) => rental.status === 'Expired' || rental.status === 'Removed'
+  );
+  const allRemovableSelected =
+    removableRentals.length > 0 &&
+    selectedIds.length === removableRentals.length;
 
   const confirmAction = (
     title: string,
@@ -120,27 +122,27 @@ export default function RentalsScreen() {
   };
 
   const handleSelectAll = () => {
-    if (allExpiredSelected) {
+    if (allRemovableSelected) {
       setSelectedIds([]);
       return;
     }
-    setSelectedIds(expiredRentals.map((item) => item.id));
+    setSelectedIds(removableRentals.map((item) => item.id));
   };
 
   const runRemoveSelected = async () => {
-    const expiredIds = selectedIds.filter((id) =>
-      expiredRentals.some((rental) => rental.id === id)
+    const removableIds = selectedIds.filter((id) =>
+      removableRentals.some((rental) => rental.id === id)
     );
 
-    if (!token || expiredIds.length === 0 || isRemovingSelected) {
+    if (!token || removableIds.length === 0 || isRemovingSelected) {
       return;
     }
 
     setIsRemovingSelected(true);
 
     try {
-      await hideExpiredRentals(token, expiredIds);
-      const idSet = new Set(expiredIds);
+      await hideExpiredRentals(token, removableIds);
+      const idSet = new Set(removableIds);
       setRentals((current) => current.filter((rental) => !idSet.has(rental.id)));
       exitSelectionMode();
     } catch (error) {
@@ -157,7 +159,7 @@ export default function RentalsScreen() {
 
   const confirmRemoveSelected = () => {
     const count = selectedIds.filter((id) =>
-      expiredRentals.some((rental) => rental.id === id)
+      removableRentals.some((rental) => rental.id === id)
     ).length;
 
     if (count === 0) {
@@ -166,7 +168,7 @@ export default function RentalsScreen() {
 
     confirmAction(
       'Remove selected rentals?',
-      `${count} expired rental${count === 1 ? '' : 's'} will be removed from your list. Active rentals will not be affected.`,
+      `${count} rental${count === 1 ? '' : 's'} will be removed from your list. Active rentals will not be affected.`,
       () => {
         void runRemoveSelected();
       }
@@ -175,7 +177,7 @@ export default function RentalsScreen() {
 
   const handleCardPress = (rental: Rental) => {
     if (selectionMode) {
-      if (rental.status === 'Expired') {
+      if (rental.status === 'Expired' || rental.status === 'Removed') {
         toggleSelect(rental.id);
       }
       return;
@@ -198,15 +200,15 @@ export default function RentalsScreen() {
       <TouchableOpacity onPress={exitSelectionMode} style={styles.selectHeaderAction}>
         <Text style={styles.selectHeaderActionText}>Cancel</Text>
       </TouchableOpacity>
-      {expiredRentals.length > 0 ? (
+      {removableRentals.length > 0 ? (
         <TouchableOpacity onPress={handleSelectAll} style={styles.selectHeaderAction}>
           <Text style={styles.selectHeaderActionText}>
-            {allExpiredSelected ? 'Clear' : 'Select All'}
+            {allRemovableSelected ? 'Clear' : 'Select All'}
           </Text>
         </TouchableOpacity>
       ) : null}
     </View>
-  ) : expiredRentals.length > 0 ? (
+  ) : removableRentals.length > 0 ? (
     <TouchableOpacity onPress={enterSelectionMode} style={styles.selectHeaderAction}>
       <Text style={styles.selectHeaderActionText}>Select</Text>
     </TouchableOpacity>
@@ -267,7 +269,8 @@ export default function RentalsScreen() {
         ) : (
           rentals.map((rental) => {
             const imageUrl = getRentalImageUrl(rental.image);
-            const isExpired = rental.status === 'Expired';
+            const isRemovable =
+              rental.status === 'Expired' || rental.status === 'Removed';
             const isSelected = selectedIds.includes(rental.id);
 
             return (
@@ -277,12 +280,12 @@ export default function RentalsScreen() {
                   styles.card,
                   isWeb && styles.cardWeb,
                   isSelected && styles.cardSelected,
-                  selectionMode && !isExpired && styles.cardLocked,
+                  selectionMode && !isRemovable && styles.cardLocked,
                 ]}
                 onPress={() => handleCardPress(rental)}
-                activeOpacity={selectionMode && !isExpired ? 1 : 0.7}
+                activeOpacity={selectionMode && !isRemovable ? 1 : 0.7}
               >
-                {selectionMode && isExpired ? (
+                {selectionMode && isRemovable ? (
                   <View style={styles.checkboxWrap}>
                     <Ionicons
                       name={isSelected ? 'checkbox' : 'square-outline'}
@@ -408,12 +411,14 @@ export default function RentalsScreen() {
 const getStatusColor = (status: string) => {
   if (status === 'Active') return '#22C55E';
   if (status === 'Expired') return '#8B5CF6';
+  if (status === 'Removed') return '#EF4444';
   return '#6B7280';
 };
 
 const getStatusBg = (status: string) => {
   if (status === 'Active') return '#DCFCE7';
   if (status === 'Expired') return '#EDE9FE';
+  if (status === 'Removed') return '#FEE2E2';
   return '#F3F4F6';
 };
 

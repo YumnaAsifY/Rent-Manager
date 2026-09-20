@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import LiftPressable from './LiftPressable';
 
 type CenteredStatusModalProps = {
   visible: boolean;
@@ -56,13 +57,12 @@ export default function CenteredStatusModal({
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           {extra}
-          <TouchableOpacity
+          <LiftPressable
             style={styles.button}
             onPress={onButtonPress}
-            activeOpacity={0.85}
           >
             <Text style={styles.buttonText}>{buttonLabel}</Text>
-          </TouchableOpacity>
+          </LiftPressable>
           {secondaryLabel && onSecondaryPress ? (
             <TouchableOpacity
               style={styles.secondaryButton}

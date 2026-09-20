@@ -15,6 +15,7 @@ const serializePublicUser = (user) => ({
   email: user.email,
   role: user.role === 'admin' ? 'admin' : 'user',
   isActive: user.isActive !== false,
+  profileImage: user.profileImage || '',
   ...serializePayout(user),
 });
 
@@ -412,6 +413,39 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const updateProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        message: 'Please select a profile picture',
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { profileImage: `/uploads/${req.file.filename}` },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Profile picture saved',
+      user: serializePublicUser(user),
+    });
+  } catch (error) {
+    console.error('Profile image update error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while saving profile picture',
+    });
+  }
+};
+
 const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -706,6 +740,7 @@ module.exports = {
   loginUser,
   getCurrentUser,
   updateProfile,
+  updateProfileImage,
   changePassword,
   forgotPassword,
   resetPassword,

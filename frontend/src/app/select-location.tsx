@@ -11,6 +11,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import ScreenHeader from '../components/ScreenHeader';
+import LiftPressable from '../components/LiftPressable';
 import { API_BASE_URL } from '@/services/api';
 import { publishLocationPick } from '@/utils/locationPicker';
 import { showAlert } from '@/utils/showAlert';
@@ -393,7 +394,7 @@ export default function SelectLocationScreen() {
             returnKeyType="search"
             onSubmitEditing={() => void handleSearch(undefined, true)}
           />
-          <TouchableOpacity
+          <LiftPressable
             style={styles.searchButton}
             onPress={() => void handleSearch(undefined, true)}
             disabled={searching}
@@ -401,7 +402,7 @@ export default function SelectLocationScreen() {
             <Text style={styles.searchButtonText}>
               {searching ? '...' : 'Search'}
             </Text>
-          </TouchableOpacity>
+          </LiftPressable>
         </View>
 
         {suggestions.length > 0 ? (

@@ -15,6 +15,7 @@ import {
   removeStoredToken,
   storeToken,
 } from '@/services/authStorage';
+import { uploadProfileImage } from '@/services/profileImage';
 
 export type PayoutMethod = 'none' | 'jazzcash' | 'easypaisa' | 'bank';
 
@@ -25,6 +26,7 @@ export type AuthUser = {
   email: string;
   role?: 'user' | 'admin';
   isActive?: boolean;
+  profileImage?: string;
   payoutMethod?: PayoutMethod;
   payoutAccountName?: string;
   payoutNumber?: string;
@@ -61,6 +63,12 @@ type AuthContextValue = {
       payoutNumber: string;
       payoutBankName: string;
     }
+  ) => Promise<void>;
+
+  updateProfileImage: (
+    imageUri: string,
+    imageMimeType?: string | null,
+    imageFileName?: string | null
   ) => Promise<void>;
 
   changePassword: (
@@ -197,6 +205,28 @@ export function AuthProvider({
     [token]
   );
 
+  const updateProfileImage = useCallback(
+    async (
+      imageUri: string,
+      imageMimeType?: string | null,
+      imageFileName?: string | null
+    ) => {
+      if (!token) {
+        throw new ApiError('Authentication required', 401);
+      }
+
+      const updatedUser = await uploadProfileImage(
+        token,
+        imageUri,
+        imageMimeType,
+        imageFileName
+      );
+
+      setUser(updatedUser);
+    },
+    [token]
+  );
+
   // Change Password
   const changePassword = useCallback(
     async (
@@ -233,6 +263,7 @@ export function AuthProvider({
       login,
       logout,
       updateProfile,
+      updateProfileImage,
       changePassword,
     }),
     [
@@ -242,6 +273,7 @@ export function AuthProvider({
       login,
       logout,
       updateProfile,
+      updateProfileImage,
       changePassword,
     ]
   );

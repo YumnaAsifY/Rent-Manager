@@ -343,7 +343,7 @@
 //   },
 // });
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Alert, Image, Modal, Platform, TextInput, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
@@ -351,7 +351,9 @@ import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
 
 import { PayoutMethod, useAuth } from '@/context/AuthContext';
+import { getAssetImageUrl } from '@/services/assets';
 import { showAlert } from '@/utils/showAlert';
+import LiftPressable from '../components/LiftPressable';
 
 const { width, height } = Dimensions.get('window');
 const isWeb = width > 768;
@@ -365,12 +367,11 @@ const PAYOUT_OPTIONS: { key: PayoutMethod; label: string }[] = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ source?: string | string[] }>();
-  const source = Array.isArray(params.source) ? params.source[0] : params.source;
-  const showPayoutMethod = source !== 'header';
-  const { user, logout, updateProfile } = useAuth();
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const showPayoutMethod = true;
+  const { user, logout, updateProfile, updateProfileImage } = useAuth();
+  const profileImage = getAssetImageUrl(user?.profileImage);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>(
     user?.payoutMethod || 'none'
   );
@@ -425,7 +426,22 @@ export default function ProfileScreen() {
     });
 
     if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      const asset = result.assets[0];
+      try {
+        setIsUploadingImage(true);
+        await updateProfileImage(
+          asset.uri,
+          asset.mimeType,
+          asset.fileName
+        );
+      } catch (error: any) {
+        showAlert(
+          'Error',
+          error?.message || 'Unable to save profile picture. Please try again.'
+        );
+      } finally {
+        setIsUploadingImage(false);
+      }
     }
   };
 
@@ -516,9 +532,14 @@ export default function ProfileScreen() {
               <TouchableOpacity 
                 style={styles.uploadIcon}
                 onPress={pickImage}
+                disabled={isUploadingImage}
                 activeOpacity={0.8}
               >
-                <Ionicons name="camera" size={14} color="#FFFFFF" />
+                {isUploadingImage ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Ionicons name="camera" size={14} color="#FFFFFF" />
+                )}
               </TouchableOpacity>
             </TouchableOpacity>
 
@@ -578,7 +599,8 @@ export default function ProfileScreen() {
             <Text style={styles.payoutTitle}>Owner payout method</Text>
             <Text style={styles.payoutHint}>
               Admin uses this to send your rent share (JazzCash, EasyPaisa, or
-              bank).
+              bank). You receive 97% of each rent payment; 3% is the platform
+              fee.
             </Text>
             <View style={styles.methodRow}>
               {PAYOUT_OPTIONS.map((option) => {
@@ -664,14 +686,13 @@ export default function ProfileScreen() {
               </>
             ) : null}
 
-            <TouchableOpacity
+            <LiftPressable
               style={[
                 styles.payoutSaveButton,
                 isSavingPayout && styles.payoutSaveButtonDisabled,
               ]}
               onPress={() => void handleSavePayout()}
               disabled={isSavingPayout}
-              activeOpacity={0.85}
             >
               {isSavingPayout ? (
                 <ActivityIndicator color="#FFFFFF" />
@@ -680,7 +701,7 @@ export default function ProfileScreen() {
                   Save payout method
                 </Text>
               )}
-            </TouchableOpacity>
+            </LiftPressable>
           </View>
         ) : null}
 

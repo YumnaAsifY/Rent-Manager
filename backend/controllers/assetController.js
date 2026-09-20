@@ -1,8 +1,12 @@
+const mongoose = require('mongoose');
 const Asset = require('../models/Asset');
 const Rental = require('../models/Rental');
 const RentalRequest = require('../models/RentalRequest');
+const User = require('../models/User');
 const { getOwnerRentPaymentStatus } = require('../utils/billingCycle');
 const { findValidCategoryName } = require('./assetCategoryController');
+const { createNotification } = require('./notificationController');
+const { sendTenantRemovalDisputeEmail } = require('../utils/sendEmail');
 
 const formatDate = (value) => {
   if (!value) {
@@ -365,6 +369,288 @@ const createAsset = async (req, res) => {
   }
 };
 
+const updateAsset = async (req, res) => {
+  try {
+    const asset = await Asset.findById(req.params.id).populate(
+      'tenant',
+      'name phoneNumber'
+    );
+
+    if (!asset) {
+      return res.status(404).json({
+        message: 'Asset not found',
+      });
+    }
+
+    if (asset.owner.toString() !== req.userId.toString()) {
+      return res.status(403).json({
+        message: 'You do not have permission to update this asset',
+      });
+    }
+
+    if (asset.status !== 'Available') {
+      return res.status(400).json({
+        message: 'Only available assets can be edited',
+      });
+    }
+
+    const name =
+      typeof req.body.name === 'string' ? req.body.name.trim() : asset.name;
+    const type =
+      typeof req.body.type === 'string' ? req.body.type.trim() : asset.type;
+    const location =
+      typeof req.body.location === 'string'
+        ? req.body.location.trim()
+        : asset.location;
+    const description =
+      typeof req.body.description === 'string'
+        ? req.body.description.trim()
+        : asset.description || '';
+
+    if (!name) {
+      return res.status(400).json({ message: 'Asset name is required' });
+    }
+
+    if (!type) {
+      return res.status(400).json({ message: 'Asset type is required' });
+    }
+
+    const validType = await findValidCategoryName(type);
+    if (!validType && type !== asset.type) {
+      return res.status(400).json({ message: 'Invalid asset type' });
+    }
+
+    if (!location) {
+      return res.status(400).json({ message: 'Location is required' });
+    }
+
+    if (req.body.monthlyRent !== undefined && req.body.monthlyRent !== null) {
+      const rentRaw = String(req.body.monthlyRent).trim();
+      if (rentRaw) {
+        const parsedRent = Number(rentRaw.replace(/,/g, ''));
+        if (Number.isNaN(parsedRent) || parsedRent <= 0) {
+          return res.status(400).json({
+            message: 'Monthly rent must be a valid number',
+          });
+        }
+        asset.monthlyRent = parsedRent;
+      }
+    }
+
+    asset.name = name;
+    asset.type = validType || asset.type;
+    asset.location = location;
+    asset.description = description;
+
+    if (req.file) {
+      asset.image = `/uploads/${req.file.filename}`;
+    }
+
+    await asset.save();
+
+    return res.status(200).json({
+      message: 'Asset updated successfully',
+      asset: serializeAsset(asset),
+    });
+  } catch (error) {
+    console.error('Update asset error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while updating asset',
+    });
+  }
+};
+
+const startOfDay = (date) => {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const parseDateInput = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed;
+};
+
+const assignAssetToTenant = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+
+    if (!email) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: "Please enter tenant's email",
+      });
+    }
+
+    const tenant = await User.findOne({ email }).session(session);
+
+    if (!tenant || tenant.role === 'admin') {
+      await session.abortTransaction();
+      return res.status(404).json({
+        message: 'This user is not registered in the app',
+      });
+    }
+
+    if (tenant._id.toString() === req.userId.toString()) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'You cannot assign an asset to yourself',
+      });
+    }
+
+    const asset = await Asset.findById(req.params.id).session(session);
+
+    if (!asset) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        message: 'Asset not found',
+      });
+    }
+
+    if (asset.owner.toString() !== req.userId.toString()) {
+      await session.abortTransaction();
+      return res.status(403).json({
+        message: 'You do not have permission to assign this asset',
+      });
+    }
+
+    if (asset.status !== 'Available') {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'Only available assets can be assigned',
+      });
+    }
+
+    const leaseStartDateRaw = parseDateInput(req.body.leaseStartDate);
+    const leaseEndDateRaw = parseDateInput(req.body.leaseEndDate);
+
+    if (!leaseStartDateRaw) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'Please select start date',
+      });
+    }
+
+    if (!leaseEndDateRaw) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'Please select end date',
+      });
+    }
+
+    const leaseStartDate = startOfDay(leaseStartDateRaw);
+    const leaseEndDate = startOfDay(leaseEndDateRaw);
+
+    if (leaseEndDate.getTime() <= leaseStartDate.getTime()) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'Lease end date must be after the start date',
+      });
+    }
+
+    asset.status = 'Rented';
+    asset.tenant = tenant._id;
+    asset.leaseStartDate = leaseStartDate;
+    asset.leaseEndDate = leaseEndDate;
+    await asset.save({ session });
+
+    await Rental.create(
+      [
+        {
+          asset: asset._id,
+          owner: asset.owner,
+          tenant: tenant._id,
+          leaseStartDate,
+          leaseEndDate,
+          monthlyRent: asset.monthlyRent ?? null,
+          isCurrent: true,
+        },
+      ],
+      { session }
+    );
+
+    const otherPending = await RentalRequest.find({
+      asset: asset._id,
+      status: 'Pending',
+    })
+      .select('_id tenant')
+      .session(session);
+
+    if (otherPending.length > 0) {
+      await RentalRequest.updateMany(
+        {
+          asset: asset._id,
+          status: 'Pending',
+        },
+        {
+          $set: { status: 'Rejected' },
+        },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+
+    await createNotification({
+      recipient: tenant._id,
+      type: 'asset_assigned',
+      title: 'Asset assigned',
+      message: `${asset.name} has been assigned to you.`,
+      relatedAsset: asset._id,
+      relatedRental: null,
+      audience: 'tenant',
+    });
+
+    const notifiedTenants = new Set();
+    for (const other of otherPending) {
+      const tenantId = other.tenant.toString();
+      if (notifiedTenants.has(tenantId) || tenantId === tenant._id.toString()) {
+        continue;
+      }
+      notifiedTenants.add(tenantId);
+      await createNotification({
+        recipient: other.tenant,
+        type: 'rental_request_rejected',
+        title: 'Request Rejected',
+        message: `Your rental request for ${asset.name} was closed because the asset is no longer available.`,
+        relatedRequest: other._id,
+        relatedAsset: asset._id,
+      });
+    }
+
+    const populated = await Asset.findById(asset._id).populate(
+      'tenant',
+      'name phoneNumber'
+    );
+
+    return res.status(200).json({
+      message: 'Asset has been assigned to the tenant',
+      asset: serializeAsset(populated),
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Assign asset error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while assigning asset',
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
 const makeAssetAvailable = async (req, res) => {
   try {
     const asset = await Asset.findById(req.params.id).populate(
@@ -431,6 +717,146 @@ const makeAssetAvailable = async (req, res) => {
   }
 };
 
+const removeTenantFromAsset = async (req, res) => {
+  try {
+    const reason = String(req.body.reason || '').trim();
+
+    if (!reason) {
+      return res.status(400).json({
+        message: 'Please provide a reason',
+      });
+    }
+
+    const asset = await Asset.findById(req.params.id).populate(
+      'tenant',
+      'name email phoneNumber'
+    );
+
+    if (!asset) {
+      return res.status(404).json({
+        message: 'Asset not found',
+      });
+    }
+
+    if (asset.owner.toString() !== req.userId.toString()) {
+      return res.status(403).json({
+        message: 'You do not have permission to update this asset',
+      });
+    }
+
+    if (asset.status !== 'Rented' || !asset.tenant) {
+      return res.status(400).json({
+        message: 'This asset has no tenant to remove',
+      });
+    }
+
+    if (isLeaseEnded(asset)) {
+      return res.status(400).json({
+        message:
+          'This lease has ended. Use Make Available instead of removing the tenant.',
+      });
+    }
+
+    const tenantId = asset.tenant._id || asset.tenant;
+    const tenantName = asset.tenant.name || 'Tenant';
+    const tenantEmail = asset.tenant.email || '';
+    const tenantPhone = asset.tenant.phoneNumber || '';
+    const owner = await User.findById(req.userId).select(
+      'name email phoneNumber'
+    );
+    const ownerName = owner?.name || 'The owner';
+    const ownerEmail = owner?.email || '';
+    const ownerPhone = owner?.phoneNumber || '';
+    const assetName = asset.name;
+
+    const currentRental = await Rental.findOne({
+      asset: asset._id,
+      tenant: tenantId,
+      isCurrent: true,
+    });
+
+    let rentCycleStatus = 'Unpaid';
+    let daysAfterLeaseStart = null;
+    const removedAt = new Date();
+    const leaseStartForDays =
+      currentRental?.leaseStartDate || asset.leaseStartDate;
+
+    if (leaseStartForDays) {
+      const start = new Date(leaseStartForDays);
+      start.setHours(0, 0, 0, 0);
+      const removedDay = new Date(removedAt);
+      removedDay.setHours(0, 0, 0, 0);
+      daysAfterLeaseStart = Math.max(
+        0,
+        Math.round((removedDay.getTime() - start.getTime()) / 86400000)
+      );
+    }
+
+    if (currentRental) {
+      const paymentStatus = await getOwnerRentPaymentStatus(currentRental);
+      const label = String(paymentStatus.rentPaymentLabel || '').toLowerCase();
+      rentCycleStatus =
+        label === 'paid' || label === 'settled' ? 'Paid' : 'Unpaid';
+
+      currentRental.removedAt = removedAt;
+      currentRental.removalReason = reason;
+      currentRental.isCurrent = false;
+      await currentRental.save();
+    }
+
+    asset.status = 'Available';
+    asset.tenant = null;
+    asset.leaseStartDate = null;
+    asset.leaseEndDate = null;
+    await asset.save();
+
+    await createNotification({
+      recipient: tenantId,
+      type: 'tenancy_cancelled',
+      title: 'Tenancy cancelled',
+      message: `${ownerName}, owner of ${assetName}, has removed you from their tenancy. Reason: ${reason}`,
+      relatedAsset: asset._id,
+      relatedRental: currentRental?._id || null,
+      audience: 'tenant',
+      cancellationReason: reason,
+      cancellationOwnerName: ownerName,
+      cancellationAssetName: assetName,
+      cancellationAssetType: asset.type || '',
+      cancellationAssetLocation: asset.location || '',
+    });
+
+    try {
+      await sendTenantRemovalDisputeEmail({
+        tenantName,
+        tenantEmail,
+        tenantPhone,
+        ownerName,
+        ownerEmail,
+        ownerPhone,
+        assetName,
+        assetType: asset.type || '',
+        assetLocation: asset.location || '',
+        reason,
+        rentCycleStatus,
+        daysAfterLeaseStart,
+      });
+    } catch (emailError) {
+      console.error('Tenant-removal dispute email error:', emailError);
+    }
+
+    return res.status(200).json({
+      message: 'Tenant has been removed',
+      asset: serializeAsset(asset),
+    });
+  } catch (error) {
+    console.error('Remove tenant error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while removing tenant',
+    });
+  }
+};
+
 const deleteAsset = async (req, res) => {
   try {
     const asset = await Asset.findById(req.params.id);
@@ -475,7 +901,10 @@ module.exports = {
   getMyAssetsCount,
   getAssetById,
   createAsset,
+  updateAsset,
+  assignAssetToTenant,
   makeAssetAvailable,
+  removeTenantFromAsset,
   deleteAsset,
   exploreAssets,
   getExploreAssetById,

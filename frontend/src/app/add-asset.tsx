@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
+import LiftPressable from '../components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import { createAsset } from '@/services/assets';
@@ -299,7 +300,7 @@ export default function AddAssetScreen() {
               setFieldErrors((prev) => ({ ...prev, location: undefined }));
             }}
           />
-          <TouchableOpacity
+          <LiftPressable
             style={styles.mapButton}
             onPress={() => {
               writeAddAssetDraft({
@@ -318,11 +319,10 @@ export default function AddAssetScreen() {
               } as any);
             }}
             disabled={isSubmitting}
-            activeOpacity={0.85}
           >
             <Ionicons name="map-outline" size={16} color="#FFFFFF" />
             <Text style={styles.mapButtonText}>Select Location on Map</Text>
-          </TouchableOpacity>
+          </LiftPressable>
           {fieldErrors.location ? (
             <Text style={styles.fieldErrorText}>{fieldErrors.location}</Text>
           ) : null}
@@ -385,7 +385,7 @@ export default function AddAssetScreen() {
       </ScrollView>
 
       <View style={styles.fabWrapper}>
-        <TouchableOpacity
+        <LiftPressable
           style={[styles.saveButton, isSubmitting && styles.buttonDisabled]}
           onPress={() => void handleSaveAsset()}
           disabled={isSubmitting}
@@ -395,7 +395,7 @@ export default function AddAssetScreen() {
           ) : (
             <Text style={styles.saveButtonText}>Save Asset</Text>
           )}
-        </TouchableOpacity>
+        </LiftPressable>
       </View>
 
       <BottomNavigation />
@@ -412,13 +412,12 @@ export default function AddAssetScreen() {
               <Ionicons name="checkmark" size={36} color="#FFFFFF" />
             </View>
             <Text style={styles.successTitle}>Asset Added Successfully!</Text>
-            <TouchableOpacity
+            <LiftPressable
               style={styles.successButton}
               onPress={() => router.back()}
-              activeOpacity={0.85}
             >
               <Text style={styles.successButtonText}>OK</Text>
-            </TouchableOpacity>
+            </LiftPressable>
           </View>
         </View>
       </Modal>
@@ -577,9 +576,10 @@ const styles = StyleSheet.create({
     right: 20,
   },
   saveButton: {
-    height: 54,
+    width: '100%',
+    height: 44,
     backgroundColor: '#323a8f',
-    borderRadius: 12,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     boxShadow: '0px 4px 8px rgba(26, 35, 126, 0.3)',
@@ -589,11 +589,11 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   saveButtonText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#ffffff',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.6,
   },
   mapButtonText: {
     color: '#FFFFFF',

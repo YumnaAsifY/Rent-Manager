@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import { showAlert } from '@/utils/showAlert';
+import LiftPressable from '../components/LiftPressable';
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
@@ -242,13 +243,13 @@ export default function ChangePasswordScreen() {
         </View>
 
         {/* Change Password Button */}
-        <TouchableOpacity
+        <LiftPressable
           style={[styles.changeButton, isSubmitting && styles.buttonDisabled]}
           onPress={() => void handleChangePassword()}
           disabled={isSubmitting}
         >
           <Text style={styles.changeButtonText}>Change Password</Text>
-        </TouchableOpacity>
+        </LiftPressable>
       </View>
     </ScrollView>
   );

@@ -5,6 +5,7 @@ import EvilIcons from '@expo/vector-icons/EvilIcons';
 
 import { ApiError, apiRequest } from '@/services/api';
 import { showAlert } from '@/utils/showAlert';
+import LiftPressable from '../components/LiftPressable';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -100,7 +101,7 @@ export default function ForgotPasswordScreen() {
           ) : null}
         </View>
 
-        <TouchableOpacity
+        <LiftPressable
           style={[styles.sendButton, isSubmitting && styles.buttonDisabled]}
           onPress={() => void handleSendResetLink()}
           disabled={isSubmitting}
@@ -108,7 +109,7 @@ export default function ForgotPasswordScreen() {
           <Text style={styles.sendButtonText}>
             {isSubmitting ? 'Sending...' : 'Send reset link'}
           </Text>
-        </TouchableOpacity>
+        </LiftPressable>
 
         <TouchableOpacity 
           style={styles.backToLoginContainer}

@@ -36,8 +36,12 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string | string[] }>();
   const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
-  const activeTab: 'requests' | 'payments' =
-    tabParam === 'payments' ? 'payments' : 'requests';
+  const activeTab: 'requests' | 'payments' | 'cancellations' =
+    tabParam === 'payments'
+      ? 'payments'
+      : tabParam === 'cancellations'
+        ? 'cancellations'
+        : 'requests';
   const { token } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +53,7 @@ export default function NotificationsScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const setActiveTab = useCallback(
-    (tab: 'requests' | 'payments') => {
+    (tab: 'requests' | 'payments' | 'cancellations') => {
       router.setParams({ tab });
       setSelectedIds([]);
     },
@@ -96,14 +100,30 @@ export default function NotificationsScreen() {
   const isPaymentNotification = (notification: AppNotification) =>
     notification.type.startsWith('payment_');
 
+  const isCancellationNotification = (notification: AppNotification) =>
+    notification.type === 'tenancy_cancelled' ||
+    notification.type.startsWith('cancellation_');
+
   const requestNotifications = notifications.filter(
-    (notification) => !isPaymentNotification(notification)
+    (notification) =>
+      !isPaymentNotification(notification) &&
+      !isCancellationNotification(notification)
   );
   const paymentNotifications = notifications.filter(isPaymentNotification);
+  const cancellationNotifications = notifications.filter(
+    isCancellationNotification
+  );
   const visibleNotifications =
-    activeTab === 'payments' ? paymentNotifications : requestNotifications;
+    activeTab === 'payments'
+      ? paymentNotifications
+      : activeTab === 'cancellations'
+        ? cancellationNotifications
+        : requestNotifications;
   const hasUnreadRequests = requestNotifications.some((item) => !item.isRead);
   const hasUnreadPayments = paymentNotifications.some((item) => !item.isRead);
+  const hasUnreadCancellations = cancellationNotifications.some(
+    (item) => !item.isRead
+  );
 
   const allSelected =
     visibleNotifications.length > 0 &&
@@ -180,7 +200,12 @@ export default function NotificationsScreen() {
       return;
     }
 
-    if (notification.type === 'rental_request_accepted') {
+    if (notification.type === 'tenancy_cancelled') {
+      router.push(`/cancellation-detail/${notification.id}` as any);
+      return;
+    }
+
+    if (notification.type === 'rental_request_accepted' || notification.type === 'asset_assigned') {
       router.push('/rentals' as any);
       return;
     }
@@ -188,7 +213,8 @@ export default function NotificationsScreen() {
     if (notification.type.startsWith('payment_')) {
       if (
         notification.type === 'payment_received' ||
-        notification.type === 'payment_settled'
+        notification.type === 'payment_settled' ||
+        notification.type === 'payment_sent_to_admin'
       ) {
         router.push({
           pathname: '/payment',
@@ -457,6 +483,11 @@ export default function NotificationsScreen() {
                   label: 'Payments',
                   hasUnread: hasUnreadPayments,
                 },
+                {
+                  id: 'cancellations' as const,
+                  label: 'Cancellation',
+                  hasUnread: hasUnreadCancellations,
+                },
               ]
             ).map((tab) => {
               const isActive = activeTab === tab.id;
@@ -518,7 +549,9 @@ export default function NotificationsScreen() {
                 ? 'No notifications'
                 : activeTab === 'payments'
                   ? 'No payment notifications'
-                  : 'No rental request notifications'}
+                  : activeTab === 'cancellations'
+                    ? 'No cancellation notifications'
+                    : 'No rental request notifications'}
             </Text>
             <Text style={styles.emptySubText}>You're all caught up!</Text>
           </View>

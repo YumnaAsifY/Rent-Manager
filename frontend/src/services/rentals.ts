@@ -19,12 +19,14 @@ export type RentalAsset = {
 
 export type Rental = {
   id: string;
-  status: 'Active' | 'Expired';
+  status: 'Active' | 'Expired' | 'Removed';
   leaseStartDate: string | null;
   leaseEndDate: string | null;
   startDate: string | null;
   endDate: string | null;
   isCurrent: boolean;
+  removedAt?: string | null;
+  removalReason?: string;
   monthlyRent: number | null;
   rent: string | null;
   asset: RentalAsset | null;

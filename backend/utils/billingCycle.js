@@ -159,6 +159,10 @@ const getRentalBillingState = async (rental, todayParts = getDateParts()) => {
     return defaultState;
   }
 
+  if (rental.removedAt) {
+    return defaultState;
+  }
+
   const leaseStart = getDateParts(rental.leaseStartDate);
   const leaseEnd = getDateParts(rental.leaseEndDate);
   if (!leaseStart || !leaseEnd) {

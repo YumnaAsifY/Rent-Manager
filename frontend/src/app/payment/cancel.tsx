@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import ScreenHeader from '../../components/ScreenHeader';
+import LiftPressable from '../../components/LiftPressable';
 
 /**
  * Safepay redirect cancel landing (Phase 3).
@@ -29,17 +30,16 @@ export default function PaymentCancelScreen() {
           <Text style={styles.meta}>Payment ID: {paymentId}</Text>
         ) : null}
 
-        <TouchableOpacity
+        <LiftPressable
           style={styles.button}
           onPress={() =>
             router.replace({
               pathname: '/payment',
             } as any)
           }
-          activeOpacity={0.85}
         >
           <Text style={styles.buttonText}>Back to Payments</Text>
-        </TouchableOpacity>
+        </LiftPressable>
       </View>
     </View>
   );

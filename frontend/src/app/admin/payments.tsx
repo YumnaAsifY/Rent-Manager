@@ -14,6 +14,7 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import AdminShell from '@/components/admin/AdminShell';
+import LiftPressable from '@/components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -188,7 +189,7 @@ export default function AdminPaymentsScreen() {
           ) : (
             payments.map((payment) => {
               const isPending = payment.status === 'pending_settlement';
-              const profitPercent = payment.adminProfitPercent ?? 10;
+              const profitPercent = payment.adminProfitPercent ?? 3;
 
               return (
                 <View
@@ -264,11 +265,10 @@ export default function AdminPaymentsScreen() {
                   </View>
 
                   {isPending ? (
-                    <TouchableOpacity
+                    <LiftPressable
                       style={styles.settleBtn}
                       onPress={() => markSettled(payment)}
                       disabled={settlingId === payment.id}
-                      activeOpacity={0.85}
                     >
                       {settlingId === payment.id ? (
                         <ActivityIndicator color="#ffffff" />
@@ -282,7 +282,7 @@ export default function AdminPaymentsScreen() {
                           <Text style={styles.settleBtnText}>Mark Settled</Text>
                         </>
                       )}
-                    </TouchableOpacity>
+                    </LiftPressable>
                   ) : (
                     <View style={styles.settledRow}>
                       <Ionicons

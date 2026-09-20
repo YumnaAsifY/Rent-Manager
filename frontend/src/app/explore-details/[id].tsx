@@ -18,6 +18,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import BottomNavigation from '../../components/BottomNavigation';
 import ScreenHeader from '../../components/ScreenHeader';
+import LiftPressable from '../../components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -372,12 +373,12 @@ export default function ExploreAssetDetailsScreen() {
 
           {showRequestButton ? (
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
+              <LiftPressable
                 style={styles.requestButton}
                 onPress={openRequestModal}
               >
                 <Text style={styles.requestButtonText}>Request</Text>
-              </TouchableOpacity>
+              </LiftPressable>
             </View>
           ) : null}
 
@@ -551,7 +552,7 @@ export default function ExploreAssetDetailsScreen() {
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              <LiftPressable
                 style={[
                   styles.modalConfirmButton,
                   isSubmitting && styles.buttonDisabled,
@@ -564,7 +565,7 @@ export default function ExploreAssetDetailsScreen() {
                 ) : (
                   <Text style={styles.modalConfirmText}>Send Request</Text>
                 )}
-              </TouchableOpacity>
+              </LiftPressable>
             </View>
           </View>
         </View>

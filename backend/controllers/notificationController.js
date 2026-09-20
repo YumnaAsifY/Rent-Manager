@@ -11,6 +11,11 @@ const createNotification = async ({
   relatedPayment = null,
   scheduleKey,
   audience,
+  cancellationReason,
+  cancellationOwnerName,
+  cancellationAssetName,
+  cancellationAssetType,
+  cancellationAssetLocation,
 }) => {
   const payload = {
     recipient,
@@ -31,6 +36,22 @@ const createNotification = async ({
 
   if (audience) {
     payload.audience = audience;
+  }
+
+  if (cancellationReason) {
+    payload.cancellationReason = cancellationReason;
+  }
+  if (cancellationOwnerName) {
+    payload.cancellationOwnerName = cancellationOwnerName;
+  }
+  if (cancellationAssetName) {
+    payload.cancellationAssetName = cancellationAssetName;
+  }
+  if (cancellationAssetType) {
+    payload.cancellationAssetType = cancellationAssetType;
+  }
+  if (cancellationAssetLocation) {
+    payload.cancellationAssetLocation = cancellationAssetLocation;
   }
 
   return Notification.create(payload);
@@ -58,6 +79,11 @@ const serializeNotification = (notification) => {
     relatedPaymentId: notification.relatedPayment
       ? notification.relatedPayment.toString()
       : null,
+    cancellationReason: notification.cancellationReason || '',
+    cancellationOwnerName: notification.cancellationOwnerName || '',
+    cancellationAssetName: notification.cancellationAssetName || '',
+    cancellationAssetType: notification.cancellationAssetType || '',
+    cancellationAssetLocation: notification.cancellationAssetLocation || '',
     audience: notification.audience || null,
     isRead: Boolean(notification.isRead),
     read: Boolean(notification.isRead),
@@ -110,6 +136,29 @@ const getMyNotifications = async (req, res) => {
 
     return res.status(500).json({
       message: 'Server error while fetching notifications',
+    });
+  }
+};
+
+const getNotificationById = async (req, res) => {
+  try {
+    const notification = await Notification.findOne({
+      _id: req.params.id,
+      ...visibleForRecipient(req.userId),
+    });
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    return res.status(200).json({
+      notification: serializeNotification(notification),
+    });
+  } catch (error) {
+    console.error('Get notification by id error:', error);
+
+    return res.status(500).json({
+      message: 'Server error while fetching notification',
     });
   }
 };
@@ -244,6 +293,7 @@ const deleteNotifications = async (req, res) => {
 module.exports = {
   createNotification,
   getMyNotifications,
+  getNotificationById,
   getUnreadNotificationsCount,
   markNotificationRead,
   markAllNotificationsRead,

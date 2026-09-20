@@ -16,6 +16,7 @@ import { useCallback, useState } from 'react';
 
 import BottomNavigation from '../../components/BottomNavigation';
 import ScreenHeader from '../../components/ScreenHeader';
+import LiftPressable from '../../components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -265,8 +266,17 @@ export default function RentalDetailScreen() {
             </View>
           ) : null}
 
+          {rental.status === 'Removed' && rental.removalReason ? (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.leaseTitle}>Removal reason</Text>
+              <Text style={styles.removalReason}>{rental.removalReason}</Text>
+            </>
+          ) : null}
+
           {rental.monthlyRent != null &&
           rental.monthlyRent > 0 &&
+          rental.status === 'Active' &&
           rental.canPayRent ? (
             <>
               <View style={styles.divider} />
@@ -275,11 +285,13 @@ export default function RentalDetailScreen() {
                   Your rent is overdue — pay now via Safepay.
                 </Text>
               ) : null}
-              <TouchableOpacity
+              <Text style={styles.feeNote}>
+                A 3% platform fee is included. The owner receives 97%.
+              </Text>
+              <LiftPressable
                 style={[styles.payButton, paying && styles.payButtonDisabled]}
                 disabled={paying}
                 onPress={() => void handlePayRent()}
-                activeOpacity={0.85}
               >
                 {paying ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -289,7 +301,7 @@ export default function RentalDetailScreen() {
                     <Text style={styles.payButtonText}>Pay with Safepay</Text>
                   </>
                 )}
-              </TouchableOpacity>
+              </LiftPressable>
             </>
           ) : null}
         </View>
@@ -303,12 +315,14 @@ export default function RentalDetailScreen() {
 const getStatusColor = (status: string) => {
   if (status === 'Active') return '#22C55E';
   if (status === 'Expired') return '#8B5CF6';
+  if (status === 'Removed') return '#EF4444';
   return '#6B7280';
 };
 
 const getStatusBg = (status: string) => {
   if (status === 'Active') return '#DCFCE7';
   if (status === 'Expired') return '#EDE9FE';
+  if (status === 'Removed') return '#FEE2E2';
   return '#F3F4F6';
 };
 
@@ -443,6 +457,11 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     marginBottom: 8,
   },
+  removalReason: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 22,
+  },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -482,6 +501,12 @@ const styles = StyleSheet.create({
     color: '#B45309',
     fontWeight: '600',
     lineHeight: 18,
+  },
+  feeNote: {
+    marginBottom: 12,
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 17,
   },
   payButton: {
     backgroundColor: '#323a8f',

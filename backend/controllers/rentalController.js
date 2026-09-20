@@ -20,12 +20,16 @@ const getLeaseEndBoundary = (leaseEndDate) => {
   return end;
 };
 
-const getDisplayStatus = (leaseEndDate) => {
-  if (!leaseEndDate) {
+const getDisplayStatus = (rental) => {
+  if (rental.removedAt) {
+    return 'Removed';
+  }
+
+  if (!rental.leaseEndDate) {
     return 'Expired';
   }
 
-  return getLeaseEndBoundary(leaseEndDate).getTime() >= Date.now()
+  return getLeaseEndBoundary(rental.leaseEndDate).getTime() >= Date.now()
     ? 'Active'
     : 'Expired';
 };
@@ -53,7 +57,7 @@ const serializeRental = (rental) => {
         ? assetDoc.monthlyRent
         : null;
 
-  const status = getDisplayStatus(rental.leaseEndDate);
+  const status = getDisplayStatus(rental);
 
   return {
     id: rental._id.toString(),
@@ -63,6 +67,8 @@ const serializeRental = (rental) => {
     startDate: formatDate(rental.leaseStartDate),
     endDate: formatDate(rental.leaseEndDate),
     isCurrent: Boolean(rental.isCurrent),
+    removedAt: rental.removedAt || null,
+    removalReason: rental.removalReason || '',
     monthlyRent,
     rent:
       monthlyRent != null
@@ -204,7 +210,7 @@ const hideExpiredRentals = async (req, res) => {
 
     if (ids.length === 0) {
       return res.status(400).json({
-        message: 'Select at least one expired rental to remove',
+        message: 'Select at least one expired or removed rental to delete',
       });
     }
 
@@ -213,19 +219,19 @@ const hideExpiredRentals = async (req, res) => {
         _id: { $in: ids },
         tenant: req.userId,
         tenantDeleted: { $ne: true },
-        ...expiredLeaseQuery(),
+        $or: [{ removedAt: { $ne: null } }, expiredLeaseQuery()],
       },
       { $set: { tenantDeleted: true } }
     );
 
     if (!result.modifiedCount) {
       return res.status(400).json({
-        message: 'Only expired rentals can be removed from My Rentals',
+        message: 'Only expired or removed rentals can be deleted from My Rentals',
       });
     }
 
     return res.status(200).json({
-      message: 'Expired rentals removed from your list',
+      message: 'Selected rentals removed from your list',
     });
   } catch (error) {
     console.error('Hide expired rentals error:', error);

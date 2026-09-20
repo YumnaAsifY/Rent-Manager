@@ -142,7 +142,7 @@ export default function HomeScreen() {
     {
       id: 4,
       title: 'Explore Assets',
-      subtitle: 'Find your next asset',
+      subtitle: 'Find your desired asset',
       icon: 'search' as const,
       onPress: () => router.push('/exploree' as any),
       cardBg: '#F5F1FF',
@@ -347,7 +347,7 @@ export default function HomeScreen() {
                   </Text>
                   <View style={styles.heroAccent} />
                   <Text style={styles.heroSubtitle}>
-                    Manage your properties, rentals, and next move in one
+                    Manage your assets, rentals, and next move in one
                     convenient place.
                   </Text>
                 </View>
@@ -367,6 +367,7 @@ export default function HomeScreen() {
                       iconBg={card.iconBg}
                       desktop
                       showViewDetails
+                      liftOnInteract
                     />
                   </View>
                 ))}
@@ -469,6 +470,7 @@ export default function HomeScreen() {
               iconColor={card.iconColor}
               iconBg={card.iconBg}
               showViewDetails
+              liftOnInteract
             />
           ))}
         </View>

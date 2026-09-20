@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ApiError, apiRequest } from '@/services/api';
+import LiftPressable from '../components/LiftPressable';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -176,13 +177,13 @@ export default function ResetPasswordScreen() {
               <Text style={styles.validationText}>{formError}</Text>
             ) : null}
 
-            <TouchableOpacity
+            <LiftPressable
               style={[styles.resetButton, isSubmitting && styles.buttonDisabled]}
               onPress={() => void handleResetPassword()}
               disabled={isSubmitting}
             >
               <Text style={styles.resetButtonText}>Reset Password</Text>
-            </TouchableOpacity>
+            </LiftPressable>
           </>
         )}
 

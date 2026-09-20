@@ -22,6 +22,9 @@ const notificationSchema = new mongoose.Schema(
         'payment_unpaid_warning',
         'payment_received',
         'payment_settled',
+        'payment_sent_to_admin',
+        'asset_assigned',
+        'tenancy_cancelled',
       ],
       required: true,
     },
@@ -88,6 +91,36 @@ const notificationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
       index: true,
+    },
+
+    cancellationReason: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    cancellationOwnerName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    cancellationAssetName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    cancellationAssetType: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    cancellationAssetLocation: {
+      type: String,
+      trim: true,
+      default: '',
     },
   },
   {

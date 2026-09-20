@@ -17,7 +17,7 @@ function getSafepayConfig() {
     apiKey: process.env.SAFEPAY_API_KEY || '',
     secretKey: process.env.SAFEPAY_SECRET_KEY || '',
     webhookSecret: process.env.SAFEPAY_WEBHOOK_SECRET || '',
-    adminProfitPercent: Number(process.env.ADMIN_PROFIT_PERCENT || 10),
+    adminProfitPercent: Number(process.env.ADMIN_PROFIT_PERCENT || 3),
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8081',
   };
 }

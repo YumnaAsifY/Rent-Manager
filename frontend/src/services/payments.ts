@@ -64,6 +64,8 @@ export type PaymentHistoryItem = {
   ownerName: string;
   totalAmount: number;
   ownerShareAmount: number;
+  adminProfitPercent?: number;
+  adminProfitAmount?: number;
   status: 'pending_settlement' | 'settled' | string;
   paidAt?: string | null;
   settledAt?: string | null;

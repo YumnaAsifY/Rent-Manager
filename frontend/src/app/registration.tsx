@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ApiError, apiRequest } from '@/services/api';
 import { showAlert } from '@/utils/showAlert';
+import LiftPressable from '../components/LiftPressable';
 
 export default function RegistrationScreen() {
   const router = useRouter();
@@ -354,9 +355,9 @@ export default function RegistrationScreen() {
           </View>
 
           {/* Register Button */}
-          <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
+          <LiftPressable style={styles.registerButton} onPress={handleRegister}>
             <Text style={styles.registerButtonText}>Register</Text>
-          </TouchableOpacity>
+          </LiftPressable>
 
           {/* Already registered? */}
           <TouchableOpacity

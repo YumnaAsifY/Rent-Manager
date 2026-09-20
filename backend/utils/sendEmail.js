@@ -101,8 +101,105 @@ const sendContactEmail = async ({
   });
 };
 
+const formatContact = (email, phone) => {
+  const parts = [];
+  if (email) {
+    parts.push(email);
+  }
+  if (phone) {
+    parts.push(phone);
+  }
+  return parts.length ? parts.join(', ') : 'N/A';
+};
+
+const formatDaysAfterStart = (days) => {
+  if (days == null || Number.isNaN(Number(days))) {
+    return 'N/A';
+  }
+  const count = Math.max(0, Math.round(Number(days)));
+  if (count === 0) {
+    return 'Removed on the lease start date';
+  }
+  return `Removed ${count} day${count === 1 ? '' : 's'} after lease start`;
+};
+
+const sendTenantRemovalDisputeEmail = async ({
+  tenantName,
+  tenantEmail,
+  tenantPhone,
+  ownerName,
+  ownerEmail,
+  ownerPhone,
+  assetName,
+  assetType,
+  assetLocation,
+  reason,
+  rentCycleStatus,
+  daysAfterLeaseStart,
+}) => {
+  const to = String(
+    process.env.DISPUTE_EMAIL || process.env.ADMIN_EMAIL || ''
+  )
+    .trim()
+    .toLowerCase();
+
+  if (!to) {
+    console.warn(
+      'DISPUTE_EMAIL / ADMIN_EMAIL is not set — skip tenant-removal dispute email'
+    );
+    return;
+  }
+
+  const transporter = createTransporter();
+  const cycle = rentCycleStatus === 'Paid' ? 'Paid' : 'Unpaid';
+  const typeLine = assetType || 'N/A';
+  const locationLine = assetLocation || 'N/A';
+  const ownerContact = formatContact(ownerEmail, ownerPhone);
+  const tenantContact = formatContact(tenantEmail, tenantPhone);
+  const removedAfterStart = formatDaysAfterStart(daysAfterLeaseStart);
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+    to,
+    subject: `Rent Manager: tenant removed from ${assetName}`,
+    text: [
+      'App: Rent Manager',
+      '',
+      'An owner has removed a tenant during an active lease.',
+      '',
+      `Asset: ${assetName}`,
+      `Type: ${typeLine}`,
+      `Location: ${locationLine}`,
+      '',
+      `Owner: ${ownerName} (${ownerContact})`,
+      `Tenant: ${tenantName} (${tenantContact})`,
+      '',
+      `Current cycle rent: ${cycle}`,
+      removedAfterStart,
+      '',
+      `Reason: ${reason}`,
+    ].join('\n'),
+    html: `
+      <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1A1A1A;">
+        <p><strong>App: Rent Manager</strong></p>
+        <p>An owner has removed a tenant during an active lease.</p>
+        <p><strong>Asset:</strong> ${assetName}<br/>
+        <strong>Type:</strong> ${typeLine}<br/>
+        <strong>Location:</strong> ${locationLine}</p>
+        <p><strong>Owner:</strong> ${ownerName} (${ownerContact})<br/>
+        <strong>Tenant:</strong> ${tenantName} (${tenantContact})</p>
+        <p><strong>Current cycle rent:</strong> ${cycle}</p>
+        <p>${removedAfterStart}</p>
+        <p><strong>Reason:</strong></p>
+        <p style="white-space:pre-wrap;">${String(reason).replace(/</g, '&lt;')}</p>
+      </div>
+    `,
+  });
+};
+
 module.exports = {
   sendPasswordResetEmail,
   sendVerificationEmail,
   sendContactEmail,
+  sendTenantRemovalDisputeEmail,
 };

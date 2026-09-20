@@ -151,14 +151,15 @@ async function buildImagePart(
   };
 }
 
-const postAssetFormData = (
+const sendAssetFormData = (
+  method: 'POST' | 'PUT',
   url: string,
   token: string,
   formData: FormData
 ): Promise<{ ok: boolean; status: number; responseText: string }> => {
   if (Platform.OS === 'web') {
     return fetch(url, {
-      method: 'POST',
+      method,
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -172,7 +173,7 @@ const postAssetFormData = (
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
+    xhr.open(method, url);
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     xhr.timeout = 60000;
     xhr.onload = () => {
@@ -217,7 +218,8 @@ export async function createAsset(
   let uploadResult: { ok: boolean; status: number; responseText: string };
 
   try {
-    uploadResult = await postAssetFormData(
+    uploadResult = await sendAssetFormData(
+      'POST',
       `${API_BASE_URL}/api/assets`,
       token,
       formData
@@ -254,6 +256,111 @@ export async function createAsset(
   return (data as { asset: Asset }).asset;
 }
 
+export type UpdateAssetInput = {
+  name: string;
+  type: string;
+  location: string;
+  description?: string;
+  monthlyRent?: string;
+  imageUri?: string | null;
+  imageMimeType?: string | null;
+  imageFileName?: string | null;
+};
+
+const isRemoteImage = (imageUri: string) =>
+  /^https?:\/\//i.test(imageUri) || imageUri.startsWith('/uploads/');
+
+export async function updateAsset(
+  token: string,
+  assetId: string,
+  input: UpdateAssetInput
+): Promise<Asset> {
+  const formData = new FormData();
+  formData.append('name', input.name.trim());
+  formData.append('type', input.type.trim());
+  formData.append('location', input.location.trim());
+
+  if (input.description?.trim()) {
+    formData.append('description', input.description.trim());
+  } else {
+    formData.append('description', '');
+  }
+
+  if (input.monthlyRent?.trim()) {
+    formData.append('monthlyRent', input.monthlyRent.trim());
+  }
+
+  if (input.imageUri && !isRemoteImage(input.imageUri)) {
+    formData.append(
+      'image',
+      (await buildImagePart(
+        input.imageUri,
+        input.imageMimeType,
+        input.imageFileName
+      )) as any
+    );
+  }
+
+  let uploadResult: { ok: boolean; status: number; responseText: string };
+
+  try {
+    uploadResult = await sendAssetFormData(
+      'PUT',
+      `${API_BASE_URL}/api/assets/${assetId}`,
+      token,
+      formData
+    );
+  } catch {
+    throw new ApiError(
+      'Phone could not reach the server. Keep the same Wi-Fi as your laptop and make sure the backend is running.',
+      0
+    );
+  }
+
+  let data: unknown = {};
+
+  if (uploadResult.responseText) {
+    try {
+      data = JSON.parse(uploadResult.responseText);
+    } catch {
+      data = {};
+    }
+  }
+
+  if (!uploadResult.ok) {
+    const message =
+      typeof data === 'object' &&
+      data !== null &&
+      'message' in data &&
+      typeof data.message === 'string'
+        ? data.message
+        : 'Unable to update asset';
+
+    throw new ApiError(message, uploadResult.status);
+  }
+
+  return (data as { asset: Asset }).asset;
+}
+
+export async function assignAssetToTenant(
+  token: string,
+  assetId: string,
+  email: string,
+  leaseStartDate: string,
+  leaseEndDate: string
+): Promise<Asset> {
+  const data = await apiRequest<{ asset: Asset; message: string }>(
+    `/api/assets/${assetId}/assign`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ email, leaseStartDate, leaseEndDate }),
+    },
+    token
+  );
+
+  return data.asset;
+}
+
 export async function makeAssetAvailable(
   token: string,
   assetId: string
@@ -261,6 +368,23 @@ export async function makeAssetAvailable(
   const data = await apiRequest<{ asset: Asset; message: string }>(
     `/api/assets/${assetId}/make-available`,
     { method: 'PATCH' },
+    token
+  );
+
+  return data.asset;
+}
+
+export async function removeTenantFromAsset(
+  token: string,
+  assetId: string,
+  reason: string
+): Promise<Asset> {
+  const data = await apiRequest<{ asset: Asset; message: string }>(
+    `/api/assets/${assetId}/remove-tenant`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    },
     token
   );
 

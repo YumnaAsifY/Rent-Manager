@@ -11,7 +11,6 @@ import {
   Image,
   ActivityIndicator,
   Modal,
-  Pressable,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,12 +18,12 @@ import { useCallback, useState } from 'react';
 
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
+import LiftPressable from '../components/LiftPressable';
 import ViewLocationButton from '../components/ViewLocationButton';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
   Asset,
-  deleteAsset,
   fetchMyAssets,
   getAssetImageUrl,
   makeAssetAvailable,
@@ -45,8 +44,9 @@ export default function MyAssetsScreen() {
   const [isUpdatingId, setIsUpdatingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [menuAsset, setMenuAsset] = useState<Asset | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'Available' | 'Rented'>(
+    'Available'
+  );
 
   const loadAssets = useCallback(async () => {
     if (!token) {
@@ -130,60 +130,6 @@ export default function MyAssetsScreen() {
     );
   };
 
-  const runDeleteAsset = async (assetId: string) => {
-    if (!token || isDeleting) {
-      return;
-    }
-
-    setIsDeleting(true);
-    setMenuAsset(null);
-
-    try {
-      await deleteAsset(token, assetId);
-      setAssets((prev) => prev.filter((asset) => asset.id !== assetId));
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof ApiError
-          ? error.message
-          : 'Unable to delete this asset.'
-      );
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const confirmDeleteAsset = (asset: Asset) => {
-    setMenuAsset(null);
-
-    const runDelete = () => {
-      void runDeleteAsset(asset.id);
-    };
-
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm(
-        'Are you sure you want to delete this asset?'
-      );
-      if (confirmed) {
-        runDelete();
-      }
-      return;
-    }
-
-    Alert.alert(
-      'Delete Asset',
-      'Are you sure you want to delete this asset?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: runDelete,
-        },
-      ]
-    );
-  };
-
   const getStatusColor = (status: string) => {
     if (status === 'Available') return '#22C55E';
     if (status === 'Rented') return '#EF4444';
@@ -195,6 +141,10 @@ export default function MyAssetsScreen() {
     if (status === 'Rented') return '#FEE2E2';
     return '#F3F4F6';
   };
+
+  const filteredAssets = assets.filter(
+    (asset) => asset.status === statusFilter
+  );
 
   return (
     <View style={styles.container}>
@@ -220,15 +170,49 @@ export default function MyAssetsScreen() {
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          ) : assets.length === 0 ? (
-            <View style={styles.centeredState}>
-              <Text style={styles.emptyText}>No asset yet.</Text>
-            </View>
           ) : (
-            assets.map((asset) => {
+            <>
+              <View style={styles.filterRow}>
+                {(['Available', 'Rented'] as const).map((status) => {
+                  const isActive = statusFilter === status;
+                  return (
+                    <LiftPressable
+                      key={status}
+                      onPress={() => setStatusFilter(status)}
+                      style={[
+                        styles.filterChip,
+                        isActive && styles.filterChipActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          isActive && styles.filterChipTextActive,
+                        ]}
+                      >
+                        {status}
+                      </Text>
+                    </LiftPressable>
+                  );
+                })}
+              </View>
+
+              {assets.length === 0 ? (
+                <View style={styles.centeredState}>
+                  <Text style={styles.emptyText}>No asset yet.</Text>
+                </View>
+              ) : filteredAssets.length === 0 ? (
+                <View style={styles.centeredState}>
+                  <Text style={styles.emptyText}>
+                    {statusFilter === 'Available'
+                      ? 'No available assets.'
+                      : 'No rented assets.'}
+                  </Text>
+                </View>
+              ) : (
+            filteredAssets.map((asset) => {
               const showMakeAvailable =
                 asset.status === 'Rented' && asset.leaseStatus === 'ended';
-              const canDelete = asset.status === 'Available';
               const imageUrl = getAssetImageUrl(asset.image);
 
               return (
@@ -267,22 +251,7 @@ export default function MyAssetsScreen() {
                     </TouchableOpacity>
 
                     <View style={styles.cardContent}>
-                      <View style={styles.cardTitleRow}>
-                        <Text style={styles.assetName}>{asset.name}</Text>
-                        {canDelete ? (
-                          <TouchableOpacity
-                            style={styles.menuButton}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            onPress={() => setMenuAsset(asset)}
-                          >
-                            <Ionicons
-                              name="ellipsis-vertical"
-                              size={18}
-                              color="#64748B"
-                            />
-                          </TouchableOpacity>
-                        ) : null}
-                      </View>
+                      <Text style={styles.assetName}>{asset.name}</Text>
                       <Text style={styles.locationText}>{asset.location}</Text>
                       <ViewLocationButton location={asset.location} />
                       <Text style={styles.typeText}>{asset.type}</Text>
@@ -331,13 +300,12 @@ export default function MyAssetsScreen() {
                   </TouchableOpacity>
 
                   {showMakeAvailable && (
-                    <TouchableOpacity
+                    <LiftPressable
                       style={[
                         styles.makeAvailableButton,
                         isUpdatingId === asset.id && styles.buttonDisabled,
                       ]}
                       onPress={() => confirmMakeAvailable(asset.id)}
-                      activeOpacity={0.7}
                       disabled={isUpdatingId === asset.id}
                     >
                       <Text style={styles.makeAvailableText}>
@@ -345,11 +313,13 @@ export default function MyAssetsScreen() {
                           ? 'Updating...'
                           : 'Make Available'}
                       </Text>
-                    </TouchableOpacity>
+                    </LiftPressable>
                   )}
                 </View>
               );
             })
+              )}
+            </>
           )}
 
           <View style={styles.bottomSpacing} />
@@ -357,13 +327,13 @@ export default function MyAssetsScreen() {
       )}
 
       <View style={styles.fabWrapper}>
-        <TouchableOpacity
+        <LiftPressable
           style={styles.addButton}
           onPress={() => router.push('/add-asset' as any)}
         >
           <Ionicons name="add" size={22} color="#323a8f" />
           <Text style={styles.addButtonText}>Add asset</Text>
-        </TouchableOpacity>
+        </LiftPressable>
       </View>
 
       <BottomNavigation />
@@ -393,45 +363,6 @@ export default function MyAssetsScreen() {
           <Text style={styles.modalHint}>Tap close to dismiss</Text>
         </View>
       </Modal>
-
-      <Modal
-        visible={Boolean(menuAsset)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuAsset(null)}
-      >
-        <Pressable
-          style={styles.menuOverlay}
-          onPress={() => setMenuAsset(null)}
-        >
-          <View style={styles.menuCard}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              disabled={isDeleting}
-              onPress={() => {
-                if (menuAsset) {
-                  confirmDeleteAsset(menuAsset);
-                }
-              }}
-            >
-              {isDeleting ? (
-                <ActivityIndicator color="#EF4444" size="small" />
-              ) : (
-                <>
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                  <Text style={styles.menuDeleteText}>Delete</Text>
-                </>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => setMenuAsset(null)}
-            >
-              <Text style={styles.menuCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -449,6 +380,32 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 120,
     flexGrow: 1,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 24,
+    marginBottom: 16,
+    paddingTop: 4,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 22,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#D6DEFF',
+  },
+  filterChipActive: {
+    backgroundColor: '#323a8f',
+    borderColor: '#323a8f',
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3949AB',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
   },
   centeredState: {
     flex: 1,
@@ -525,21 +482,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  cardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 2,
-  },
   assetName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1A1A1A',
-    flex: 1,
-  },
-  menuButton: {
-    padding: 2,
+    marginBottom: 2,
   },
   locationText: {
     fontSize: 13,
@@ -654,38 +601,5 @@ const styles = StyleSheet.create({
     bottom: 60,
     color: 'rgba(255,255,255,0.5)',
     fontSize: 14,
-  },
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  menuCard: {
-    width: '100%',
-    maxWidth: 280,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  menuDeleteText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#EF4444',
-  },
-  menuCancelText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#64748B',
   },
 });

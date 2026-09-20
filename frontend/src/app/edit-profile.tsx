@@ -14,6 +14,7 @@ import { useState } from 'react';
 
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
+import LiftPressable from '../components/LiftPressable';
 
 import { useAuth } from '@/context/AuthContext';
 import { showAlert } from '@/utils/showAlert';
@@ -113,18 +114,17 @@ export default function EditProfileScreen() {
           ) : null}
         </View>
 
-        <TouchableOpacity
+        <LiftPressable
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
           onPress={() => void handleSaveChanges()}
           disabled={isSaving}
-          activeOpacity={0.8}
         >
           {isSaving ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.saveButtonText}>Save Changes</Text>
           )}
-        </TouchableOpacity>
+        </LiftPressable>
 
         <View style={styles.bottomSpacing} />
       </ScrollView>

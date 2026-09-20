@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ApiError, apiRequest } from '@/services/api';
 import { showAlert } from '@/utils/showAlert';
 import CenteredStatusModal from '../components/CenteredStatusModal';
+import LiftPressable from '../components/LiftPressable';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -213,7 +214,7 @@ export default function LoginScreen() {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
           {/* LOGIN BUTTON */}
-          <TouchableOpacity
+          <LiftPressable
             style={[styles.loginButton, isSubmitting && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={isSubmitting}
@@ -221,7 +222,7 @@ export default function LoginScreen() {
             <Text style={styles.loginButtonText}>
               {isSubmitting ? 'Logging in...' : 'Login'}
             </Text>
-          </TouchableOpacity>
+          </LiftPressable>
           {verificationPendingEmail ? (
             <View style={styles.resendWrap}>
               <TouchableOpacity

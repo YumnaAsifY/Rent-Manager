@@ -82,6 +82,12 @@ const userSchema = new mongoose.Schema(
       default: '',
     },
 
+    profileImage: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
     emailVerified: {
       type: Boolean,
     },

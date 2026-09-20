@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 
 import ScreenHeader from '../../components/ScreenHeader';
+import LiftPressable from '../../components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -187,6 +188,11 @@ export default function PaymentSuccessScreen() {
                 <Text style={styles.meta}>
                   Amount: Rs {Number(payment.totalAmount).toLocaleString('en-PK')}
                 </Text>
+                {payment.adminProfitPercent != null ? (
+                  <Text style={styles.meta}>
+                    Includes {payment.adminProfitPercent}% platform fee
+                  </Text>
+                ) : null}
                 <Text style={styles.meta}>Status: {payment.status}</Text>
               </>
             ) : null}
@@ -203,7 +209,7 @@ export default function PaymentSuccessScreen() {
               </TouchableOpacity>
             ) : null}
 
-            <TouchableOpacity
+            <LiftPressable
               style={styles.button}
               onPress={() =>
                 router.replace({
@@ -211,10 +217,9 @@ export default function PaymentSuccessScreen() {
                   params: { section: 'history' },
                 } as any)
               }
-              activeOpacity={0.85}
             >
               <Text style={styles.buttonText}>Back to Payments</Text>
-            </TouchableOpacity>
+            </LiftPressable>
           </>
         )}
       </View>

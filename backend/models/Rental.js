@@ -49,7 +49,6 @@ const rentalSchema = new mongoose.Schema(
     },
 
     // Current lease on the asset vs historical record kept after Make Available.
-    // Display Active/Expired is always derived from leaseEndDate.
     isCurrent: {
       type: Boolean,
       default: true,
@@ -59,6 +58,17 @@ const rentalSchema = new mongoose.Schema(
     tenantDeleted: {
       type: Boolean,
       default: false,
+    },
+
+    removedAt: {
+      type: Date,
+      default: null,
+    },
+
+    removalReason: {
+      type: String,
+      trim: true,
+      default: '',
     },
   },
   {
