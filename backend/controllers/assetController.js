@@ -813,8 +813,8 @@ const removeTenantFromAsset = async (req, res) => {
     await createNotification({
       recipient: tenantId,
       type: 'tenancy_cancelled',
-      title: 'Tenancy cancelled',
-      message: `${ownerName}, owner of ${assetName}, has removed you from their tenancy. Reason: ${reason}`,
+      title: 'Rental removed',
+      message: `${ownerName}, owner of ${assetName}, has removed you from this rental. Reason: ${reason}`,
       relatedAsset: asset._id,
       relatedRental: currentRental?._id || null,
       audience: 'tenant',

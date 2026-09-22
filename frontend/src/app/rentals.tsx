@@ -371,6 +371,17 @@ export default function RentalsScreen() {
                     </View>
                   ) : null}
                 </View>
+                <TouchableOpacity
+                  style={styles.detailArrow}
+                  onPress={() =>
+                    router.push(`/rental-detail/${rental.id}` as any)
+                  }
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="View rental details"
+                >
+                  <Ionicons name="chevron-forward" size={14} color="#323a8f" />
+                </TouchableOpacity>
               </TouchableOpacity>
             );
           })
@@ -506,6 +517,18 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
     padding: 12,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  detailArrow: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardWeb: {
     width: '100%',
@@ -539,6 +562,8 @@ const styles = StyleSheet.create({
   cardContent: {
     flex: 1,
     justifyContent: 'center',
+    paddingRight: 20,
+    paddingBottom: 4,
   },
   cardHeaderRow: {
     flexDirection: 'row',
