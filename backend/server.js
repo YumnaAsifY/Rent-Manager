@@ -19,6 +19,7 @@ const contactRoutes = require('./routes/contactRoutes');
 const assetCategoryRoutes = require('./routes/assetCategoryRoutes');
 const { uploadsDir } = require('./middleware/uploadMiddleware');
 const User = require('./models/User');
+const Rental = require('./models/Rental');
 const {
   seedDefaultAssetCategories,
 } = require('./controllers/assetCategoryController');
@@ -78,6 +79,8 @@ mongoose
     } else {
       console.log('ADMIN_EMAIL is not set in .env — skip admin seed');
     }
+
+    await Rental.syncRentalRequestIndex();
 
     await seedDefaultAssetCategories();
     console.log('Asset categories seeded');

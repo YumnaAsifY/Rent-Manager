@@ -14,8 +14,10 @@ import { ApiError, apiRequest } from '@/services/api';
 type VerifyStatus =
   | 'loading'
   | 'verified'
+  | 'email_updated'
   | 'already_verified'
   | 'expired'
+  | 'email_change_expired'
   | 'invalid';
 
 export default function VerifyEmailScreen() {
@@ -35,7 +37,7 @@ export default function VerifyEmailScreen() {
       }
 
       try {
-        const data = await apiRequest<{ status?: string }>(
+        const data = await apiRequest<{ status?: string; message?: string }>(
           `/api/auth/verify-email?token=${encodeURIComponent(rawToken)}`,
           { method: 'GET' }
         );
@@ -45,13 +47,23 @@ export default function VerifyEmailScreen() {
           return;
         }
 
+        if (data.status === 'email_updated') {
+          setStatus('email_updated');
+          return;
+        }
+
         setStatus('verified');
       } catch (error) {
         if (
           error instanceof ApiError &&
-          error.code === 'VERIFICATION_EXPIRED'
+          (error.code === 'VERIFICATION_EXPIRED' ||
+            error.code === 'EMAIL_CHANGE_EXPIRED')
         ) {
-          setStatus('expired');
+          setStatus(
+            error.code === 'EMAIL_CHANGE_EXPIRED'
+              ? 'email_change_expired'
+              : 'expired'
+          );
           return;
         }
         setStatus('invalid');
@@ -120,6 +132,21 @@ export default function VerifyEmailScreen() {
     );
   }
 
+  if (status === 'email_updated') {
+    return (
+      <View style={styles.page}>
+        <CenteredStatusModal
+          visible
+          variant="success"
+          title="New Email Verified"
+          message="Your new email has been verified. You can now log in with this email."
+          buttonLabel="Go to Login"
+          onButtonPress={goToLogin}
+        />
+      </View>
+    );
+  }
+
   if (status === 'already_verified') {
     return (
       <View style={styles.page}>
@@ -145,6 +172,21 @@ export default function VerifyEmailScreen() {
           message="This verification link has expired. Please register again with this email."
           buttonLabel="Go to Register"
           onButtonPress={() => router.replace('/registration' as any)}
+        />
+      </View>
+    );
+  }
+
+  if (status === 'email_change_expired') {
+    return (
+      <View style={styles.page}>
+        <CenteredStatusModal
+          visible
+          variant="error"
+          title="Verification Link Expired"
+          message="This verification link has expired. Please update your email again from Edit Profile."
+          buttonLabel="Go to Login"
+          onButtonPress={goToLogin}
         />
       </View>
     );

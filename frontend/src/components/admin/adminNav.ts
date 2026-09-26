@@ -29,7 +29,7 @@ export const adminTabs: AdminTab[] = [
   {
     name: 'Users',
     icon: 'people',
-    path: '/admin/users',
+    path: '/admin/users?view=total',
     match: (pathname: string) => pathname.startsWith('/admin/users'),
   },
   {

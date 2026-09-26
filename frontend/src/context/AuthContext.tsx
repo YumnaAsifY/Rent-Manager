@@ -24,6 +24,7 @@ export type AuthUser = {
   name: string;
   phoneNumber: string;
   email: string;
+  pendingEmail?: string;
   role?: 'user' | 'admin';
   isActive?: boolean;
   profileImage?: string;
@@ -62,7 +63,8 @@ type AuthContextValue = {
       payoutAccountName: string;
       payoutNumber: string;
       payoutBankName: string;
-    }
+    },
+    email?: string
   ) => Promise<void>;
 
   updateProfileImage: (
@@ -178,7 +180,8 @@ export function AuthProvider({
         payoutAccountName: string;
         payoutNumber: string;
         payoutBankName: string;
-      }
+      },
+      email?: string
     ) => {
       if (!token) {
         throw new ApiError(
@@ -195,6 +198,7 @@ export function AuthProvider({
             name,
             phoneNumber,
             ...(payout || {}),
+            ...(email !== undefined ? { email } : {}),
           }),
         },
         token

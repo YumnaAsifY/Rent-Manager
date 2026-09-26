@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Platform,
   useWindowDimensions,
-  Alert,
 } from 'react-native';
 import { useCallback, useState } from 'react';
 import {
@@ -17,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import AdminShell from '@/components/admin/AdminShell';
+import CenteredStatusModal from '@/components/CenteredStatusModal';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -39,12 +39,28 @@ const reasonLabel = (reason?: string | null) => {
 export default function AdminUserDetailScreen() {
   const router = useRouter();
   const { token } = useAuth();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, view: viewParam } = useLocalSearchParams<{
+    id: string;
+    view?: string | string[];
+  }>();
+  const view = Array.isArray(viewParam) ? viewParam[0] : viewParam;
+  const isManageView = view === 'manage';
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
   const [user, setUser] = useState<AdminUser | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [showReasons, setShowReasons] = useState(false);
+  const [statusModal, setStatusModal] = useState<{
+    visible: boolean;
+    variant: 'success' | 'error';
+    title: string;
+    message: string;
+  }>({
+    visible: false,
+    variant: 'success',
+    title: '',
+    message: '',
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -95,11 +111,6 @@ export default function AdminUserDetailScreen() {
       return;
     }
 
-    const title = nextActive ? 'Activate User' : 'Deactivate User';
-    const message = nextActive
-      ? `Allow ${user.name} to log in again?`
-      : `Block ${user.name} from logging in?`;
-
     const apply = async () => {
       try {
         const updated = await setAdminUserActive(
@@ -110,35 +121,28 @@ export default function AdminUserDetailScreen() {
         );
         setUser(updated);
         setShowReasons(false);
+        setStatusModal({
+          visible: true,
+          variant: 'success',
+          title: nextActive ? 'User Activated' : 'User Deactivated',
+          message: nextActive
+            ? `${user.name} can log in again.`
+            : `${user.name} has been deactivated. They cannot log in until you activate the account.`,
+        });
       } catch (error) {
-        const text =
-          error instanceof ApiError
-            ? error.message
-            : 'Unable to update user status.';
-        if (Platform.OS === 'web') {
-          window.alert(text);
-        } else {
-          Alert.alert('Error', text);
-        }
+        setStatusModal({
+          visible: true,
+          variant: 'error',
+          title: 'Unable to update',
+          message:
+            error instanceof ApiError
+              ? error.message
+              : 'Unable to update user status.',
+        });
       }
     };
 
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm(`${title}\n\n${message}`);
-      if (confirmed) {
-        void apply();
-      }
-      return;
-    }
-
-    Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: nextActive ? 'Activate' : 'Deactivate',
-        style: nextActive ? 'default' : 'destructive',
-        onPress: () => void apply(),
-      },
-    ]);
+    void apply();
   };
 
   return (
@@ -153,7 +157,11 @@ export default function AdminUserDetailScreen() {
       >
         <TouchableOpacity
           style={styles.backRow}
-          onPress={() => router.push('/admin/users' as any)}
+          onPress={() =>
+            router.push(
+              `/admin/users?view=${isManageView ? 'manage' : 'total'}` as any
+            )
+          }
           activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={20} color="#323a8f" />
@@ -177,6 +185,7 @@ export default function AdminUserDetailScreen() {
               </View>
               <View style={styles.headerInfo}>
                 <Text style={styles.name}>{user.name}</Text>
+                {isManageView ? (
                 <View
                   style={[
                     styles.badge,
@@ -194,6 +203,7 @@ export default function AdminUserDetailScreen() {
                     {user.isActive ? 'Active' : 'Deactivated'}
                   </Text>
                 </View>
+                ) : null}
               </View>
             </View>
 
@@ -217,7 +227,7 @@ export default function AdminUserDetailScreen() {
                 label="Rentals"
                 value={String(user.rentalsCount)}
               />
-              {!user.isActive ? (
+              {isManageView && !user.isActive ? (
                 <InfoRow
                   label="Block reason"
                   value={reasonLabel(user.deactivationReason)}
@@ -225,7 +235,8 @@ export default function AdminUserDetailScreen() {
               ) : null}
             </View>
 
-            {showReasons && user.isActive ? (
+            {isManageView ? (
+            showReasons && user.isActive ? (
               <View style={styles.reasonBox}>
                 <Text style={styles.reasonTitle}>Select a reason</Text>
                 {REASON_OPTIONS.map((option) => (
@@ -256,10 +267,21 @@ export default function AdminUserDetailScreen() {
                 {user.isActive ? 'Deactivate' : 'Activate'}
               </Text>
             </TouchableOpacity>
-            )}
+            )
+            ) : null}
           </View>
         )}
       </ScrollView>
+      <CenteredStatusModal
+        visible={statusModal.visible}
+        variant={statusModal.variant}
+        title={statusModal.title}
+        message={statusModal.message}
+        buttonLabel="OK"
+        onButtonPress={() =>
+          setStatusModal((current) => ({ ...current, visible: false }))
+        }
+      />
     </AdminShell>
   );
 }

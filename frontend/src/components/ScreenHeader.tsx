@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -22,8 +23,10 @@ export default function ScreenHeader({
   rightAction,
 }: ScreenHeaderProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const isDark = variant === 'dark';
   const foregroundColor = isDark ? '#FFFFFF' : '#323a8f';
+  const topInset = Platform.OS === 'web' ? 10 : Math.max(insets.top, 12);
 
   const handleBack = () => {
     if (onBack) {
@@ -44,6 +47,10 @@ export default function ScreenHeader({
       style={[
         styles.header,
         isDark ? styles.darkHeader : styles.lightHeader,
+        Platform.OS !== 'web' && {
+          paddingTop: topInset + 8,
+          minHeight: topInset + 52,
+        },
       ]}
     >
       <View style={styles.titleGroup}>

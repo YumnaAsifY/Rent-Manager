@@ -190,7 +190,7 @@ export default function PaymentSuccessScreen() {
                 </Text>
                 {payment.adminProfitPercent != null ? (
                   <Text style={styles.meta}>
-                    Includes {payment.adminProfitPercent}% platform fee
+                    Includes {payment.adminProfitPercent}% admin commission
                   </Text>
                 ) : null}
                 <Text style={styles.meta}>Status: {payment.status}</Text>

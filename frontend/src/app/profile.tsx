@@ -383,6 +383,10 @@ export default function ProfileScreen() {
     user?.payoutBankName || ''
   );
   const [isSavingPayout, setIsSavingPayout] = useState(false);
+  const [payoutAccountNameError, setPayoutAccountNameError] = useState('');
+
+  const isValidAccountHolderName = (value: string) =>
+    /^[A-Za-z][A-Za-z '\u2019-]*$/.test(value.trim());
 
   const performLogout = async () => {
     try {
@@ -459,7 +463,14 @@ export default function ProfileScreen() {
 
     if (payoutMethod !== 'none') {
       if (!payoutAccountName.trim()) {
-        showAlert('Error', 'Please enter the account holder name.');
+        setPayoutAccountNameError('Please enter the account holder name.');
+        return;
+      }
+
+      if (!isValidAccountHolderName(payoutAccountName)) {
+        setPayoutAccountNameError(
+          'Use letters, spaces, hyphen and apostrophe only.'
+        );
         return;
       }
 
@@ -546,6 +557,11 @@ export default function ProfileScreen() {
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{user?.name || 'User'}</Text>
               <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+              {user?.pendingEmail ? (
+                <Text style={styles.profilePending}>
+                  Pending: {user.pendingEmail} — verify to switch
+                </Text>
+              ) : null}
               <Text style={styles.profilePhone}>{user?.phoneNumber || ''}</Text>
               {showPayoutMethod ? (
                 user?.payoutMethod && user.payoutMethod !== 'none' ? (
@@ -599,8 +615,8 @@ export default function ProfileScreen() {
             <Text style={styles.payoutTitle}>Owner payout method</Text>
             <Text style={styles.payoutHint}>
               Admin uses this to send your rent share (JazzCash, EasyPaisa, or
-              bank). You receive 97% of each rent payment; 3% is the platform
-              fee.
+              bank). You receive 97% of each rent payment; 3% is the admin
+              commission.
             </Text>
             <View style={styles.methodRow}>
               {PAYOUT_OPTIONS.map((option) => {
@@ -637,10 +653,26 @@ export default function ProfileScreen() {
                   placeholder="Name on JazzCash / bank account"
                   placeholderTextColor="#94A3B8"
                   value={payoutAccountName}
-                  onChangeText={setPayoutAccountName}
+                  onChangeText={(text) => {
+                    setPayoutAccountName(text);
+                    if (!text.trim()) {
+                      setPayoutAccountNameError('');
+                      return;
+                    }
+                    setPayoutAccountNameError(
+                      isValidAccountHolderName(text)
+                        ? ''
+                        : 'Use letters, spaces, hyphen and apostrophe only.'
+                    );
+                  }}
                   editable={!isSavingPayout}
                   autoCapitalize="words"
                 />
+                {payoutAccountNameError ? (
+                  <Text style={styles.payoutErrorText}>
+                    {payoutAccountNameError}
+                  </Text>
+                ) : null}
 
                 {payoutMethod === 'bank' ? (
                   <>
@@ -820,6 +852,11 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 2,
   },
+  profilePending: {
+    fontSize: 12,
+    color: '#323a8f',
+    marginBottom: 2,
+  },
   profilePhone: {
     fontSize: 14,
     color: '#64748B',
@@ -922,6 +959,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1A1A1A',
     backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+  },
+  payoutErrorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: -6,
     marginBottom: 10,
   },
   payoutSaveButton: {

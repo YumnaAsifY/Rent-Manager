@@ -8,7 +8,20 @@
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.rentmanager.app",
+      "supportsTablet": true,
+      "icon": "./assets/images/icon.png",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Rent Manager needs photo access so you can upload asset and profile pictures.",
+        "NSPhotoLibraryAddUsageDescription": "Rent Manager may save images you choose for your assets and profile.",
+        "NSCameraUsageDescription": "Rent Manager needs camera access so you can take photos for assets and your profile.",
+        "NSLocationWhenInUseUsageDescription": "Rent Manager uses location so you can pick and view asset addresses.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        },
+        "LSApplicationQueriesSchemes": ["maps", "comgooglemaps"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +30,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": true
     },
     "web": {
       "output": "static",
@@ -36,7 +50,14 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Rent Manager to access your photos to upload asset and profile pictures.",
+          "cameraPermission": "Allow Rent Manager to take photos for assets and your profile."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

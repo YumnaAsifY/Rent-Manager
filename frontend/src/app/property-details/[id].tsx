@@ -646,6 +646,17 @@ export default function AssetDetailScreen() {
                 {removeReasonError ? (
                   <Text style={styles.assignErrorText}>{removeReasonError}</Text>
                 ) : null}
+                <View style={styles.adminContactNote}>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={16}
+                    color="#323a8f"
+                  />
+                  <Text style={styles.adminContactNoteText}>
+                    Admin is notified of this removal and may contact you about
+                    it.
+                  </Text>
+                </View>
                 <LiftPressable
                   style={[
                     styles.assignSubmitButton,
@@ -882,6 +893,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#EF4444',
     width: 230,
+  },
+  adminContactNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    maxWidth: 360,
+    width: '100%',
+  },
+  adminContactNoteText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#323a8f',
   },
   assignSubmitButton: {
     marginTop: 10,

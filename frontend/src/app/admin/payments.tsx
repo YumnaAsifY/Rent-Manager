@@ -244,7 +244,7 @@ export default function AdminPaymentsScreen() {
                     </View>
                     <View style={styles.metaItem}>
                       <Text style={styles.metaLabel}>
-                        Admin profit ({profitPercent}%)
+                        Admin commission ({profitPercent}%)
                       </Text>
                       <Text style={styles.metaProfit}>
                         {formatMoney(payment.adminProfitAmount)}

@@ -33,6 +33,7 @@ export default function LoginScreen() {
   }>({});
   const [showRegistered, setShowRegistered] = useState(registeredFlag === '1');
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
   const [verificationPendingEmail, setVerificationPendingEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [resendNote, setResendNote] = useState('');
@@ -105,6 +106,11 @@ export default function LoginScreen() {
       ) {
         setVerificationPendingEmail(email.trim().toLowerCase());
         setShowPendingModal(true);
+      } else if (
+        error instanceof ApiError &&
+        error.code === 'ACCOUNT_DEACTIVATED'
+      ) {
+        setShowDeactivatedModal(true);
       } else if (
         error instanceof ApiError &&
         error.code === 'VERIFICATION_EXPIRED'
@@ -269,6 +275,14 @@ export default function LoginScreen() {
         message="Please check your registered email and verify your account before logging in."
         buttonLabel="OK"
         onButtonPress={() => setShowPendingModal(false)}
+      />
+      <CenteredStatusModal
+        visible={showDeactivatedModal}
+        variant="error"
+        title="Account Deactivated"
+        message="An admin has deactivated your account. You cannot log in until an admin activates it again."
+        buttonLabel="OK"
+        onButtonPress={() => setShowDeactivatedModal(false)}
       />
     </ScrollView>
   );

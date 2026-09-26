@@ -198,8 +198,8 @@ export default function PaymentScreen() {
         </Text>
         <Text style={styles.feeNote}>
           {item.viewerRole === 'owner'
-            ? `After ${item.adminProfitPercent ?? 3}% platform fee`
-            : `Includes ${item.adminProfitPercent ?? 3}% platform fee`}
+            ? `After ${item.adminProfitPercent ?? 3}% admin commission`
+            : `Includes ${item.adminProfitPercent ?? 3}% admin commission`}
         </Text>
 
         <Text style={styles.historyDate}>Paid: {item.paidDate || '—'}</Text>
@@ -225,29 +225,26 @@ export default function PaymentScreen() {
       <ScreenHeader title="Payment" variant="dark" />
 
       <View style={styles.sectionTabs}>
-        {isTenant ? (
-          <TouchableOpacity
+        <TouchableOpacity
+          style={[
+            styles.sectionTab,
+            activeSection === 'pay' && styles.sectionTabActive,
+          ]}
+          onPress={() => setActiveSection('pay')}
+        >
+          <Text
             style={[
-              styles.sectionTab,
-              activeSection === 'pay' && styles.sectionTabActive,
+              styles.sectionTabText,
+              activeSection === 'pay' && styles.sectionTabTextActive,
             ]}
-            onPress={() => setActiveSection('pay')}
           >
-            <Text
-              style={[
-                styles.sectionTabText,
-                activeSection === 'pay' && styles.sectionTabTextActive,
-              ]}
-            >
-              Pay
-            </Text>
-          </TouchableOpacity>
-        ) : null}
+            Pay
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.sectionTab,
             activeSection === 'history' && styles.sectionTabActive,
-            !isTenant && styles.sectionTabFull,
           ]}
           onPress={() => setActiveSection('history')}
         >
@@ -277,7 +274,7 @@ export default function PaymentScreen() {
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : activeSection === 'pay' && isTenant ? (
+        ) : activeSection === 'pay' ? (
           <>
             <Text style={styles.hint}>
               Pay rent securely via Safepay. You will be redirected to the
@@ -286,20 +283,20 @@ export default function PaymentScreen() {
 
             {payableRentals.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="checkmark-circle-outline" size={60} color="#22C55E" />
+                <Ionicons
+                  name={
+                    isTenant
+                      ? 'checkmark-circle-outline'
+                      : 'card-outline'
+                  }
+                  size={60}
+                  color={isTenant ? '#22C55E' : '#CBD5E1'}
+                />
                 <Text style={styles.emptyText}>
-                  {rentals.length === 0
-                    ? 'No rentals to pay.'
-                    : 'You are caught up for now. No payment due.'}
+                  {isTenant
+                    ? 'You are caught up for now. No payment due.'
+                    : 'You pay rent here for assets you rent. You have no active rental to pay right now.'}
                 </Text>
-                {rentals.length === 0 ? (
-                  <TouchableOpacity
-                    style={styles.retryButton}
-                    onPress={() => router.push('/rentals' as any)}
-                  >
-                    <Text style={styles.retryButtonText}>Go to My Rentals</Text>
-                  </TouchableOpacity>
-                ) : null}
               </View>
             ) : (
               payableRentals.map((rental) => {
@@ -330,7 +327,7 @@ export default function PaymentScreen() {
                             : 'Rent not set')}
                       </Text>
                       <Text style={styles.feeNote}>
-                        A 3% platform fee is included. The owner receives 97%.
+                        A 3% admin commission is included. The owner receives 97%.
                       </Text>
                       {rental.isOverdue ? (
                         <Text style={styles.overdueText}>
@@ -415,7 +412,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionTabFull: {},
   sectionTabActive: {
     backgroundColor: '#323a8f',
     borderColor: '#323a8f',

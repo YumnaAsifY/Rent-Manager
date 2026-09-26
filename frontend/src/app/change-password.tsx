@@ -160,7 +160,7 @@ export default function ChangePasswordScreen() {
               }
             >
               <Ionicons
-                name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'}
+                name={showCurrentPassword ? 'eye-outline' : 'eye-off-outline'}
                 size={22}
                 color="#666666"
               />
@@ -194,7 +194,7 @@ export default function ChangePasswordScreen() {
               accessibilityLabel={showNewPassword ? 'Hide new password' : 'Show new password'}
             >
               <Ionicons
-                name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                name={showNewPassword ? 'eye-outline' : 'eye-off-outline'}
                 size={22}
                 color="#666666"
               />
@@ -231,7 +231,7 @@ export default function ChangePasswordScreen() {
               }
             >
               <Ionicons
-                name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
                 size={22}
                 color="#666666"
               />

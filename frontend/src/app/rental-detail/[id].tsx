@@ -286,7 +286,7 @@ export default function RentalDetailScreen() {
                 </Text>
               ) : null}
               <Text style={styles.feeNote}>
-                A 3% platform fee is included. The owner receives 97%.
+                A 3% admin commission is included. The owner receives 97%.
               </Text>
               <LiftPressable
                 style={[styles.payButton, paying && styles.payButtonDisabled]}

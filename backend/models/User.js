@@ -101,6 +101,13 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+
+    pendingEmail: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      default: undefined,
+    },
   },
   {
     timestamps: true,

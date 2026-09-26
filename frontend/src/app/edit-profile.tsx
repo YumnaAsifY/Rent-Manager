@@ -2,7 +2,6 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   StatusBar,
   TextInput,
@@ -17,16 +16,30 @@ import ScreenHeader from '../components/ScreenHeader';
 import LiftPressable from '../components/LiftPressable';
 
 import { useAuth } from '@/context/AuthContext';
+import { apiRequest } from '@/services/api';
 import { showAlert } from '@/utils/showAlert';
 
 export default function EditProfileScreen() {
   const router = useRouter();
 
-  const { user, updateProfile } = useAuth();
+  const { user, token, updateProfile } = useAuth();
 
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phoneNumber || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [emailError, setEmailError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+
+  const pendingEmail = user?.pendingEmail || '';
+
+  const isGmailAddress = (value: string) => {
+    const trimmedEmail = value.trim();
+    return (
+      trimmedEmail === trimmedEmail.toLowerCase() &&
+      /^[^\s@]+@gmail\.com$/.test(trimmedEmail)
+    );
+  };
 
   const validatePhoneNumber = (text: string) => {
     const numericText = text.replace(/[^0-9]/g, '');
@@ -36,30 +49,38 @@ export default function EditProfileScreen() {
   };
 
   const handleSaveChanges = async () => {
-    const trimmedName = name.trim();
-    const trimmedPhone = phone.trim();
+    const trimmedName = name.trim() || user?.name?.trim() || '';
+    const trimmedPhone = phone.trim() || user?.phoneNumber?.trim() || '';
+    const trimmedEmail = (
+      email.trim() ||
+      user?.email ||
+      ''
+    ).toLowerCase();
+    setEmailError('');
 
-    if (!trimmedName) {
-      showAlert('Error', 'Please enter your full name.');
-      return;
-    }
-
-    if (!trimmedPhone) {
-      showAlert('Error', 'Please enter your phone number.');
-      return;
-    }
-
-    if (trimmedPhone.length !== 11) {
+    if (phone.trim() && phone.trim().length !== 11) {
       showAlert('Error', 'Phone number must be exactly 11 digits.');
+      return;
+    }
+
+    if (email.trim() && !isGmailAddress(email.trim().toLowerCase())) {
+      setEmailError('Please enter a valid lowercase Gmail address');
       return;
     }
 
     try {
       setIsSaving(true);
-      await updateProfile(trimmedName, trimmedPhone);
-      showAlert('Successfully changed', undefined, () => {
-        router.back();
-      });
+      await updateProfile(trimmedName, trimmedPhone, undefined, trimmedEmail);
+      const waitingVerify = trimmedEmail !== (user?.email || '').toLowerCase();
+      showAlert(
+        waitingVerify ? 'Verify your new email' : 'Successfully changed',
+        waitingVerify
+          ? 'Pending: please verify the new Gmail. A link was sent there. Your current email stays until you verify.'
+          : undefined,
+        () => {
+          router.back();
+        }
+      );
     } catch (error: any) {
       console.error('Update profile error:', error);
       showAlert(
@@ -68,6 +89,35 @@ export default function EditProfileScreen() {
       );
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleResendPending = async () => {
+    if (!token || !pendingEmail || isResending) {
+      return;
+    }
+
+    try {
+      setIsResending(true);
+      const data = await apiRequest<{ message?: string }>(
+        '/api/auth/resend-verification',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email: user?.email || pendingEmail }),
+        },
+        token
+      );
+      showAlert(
+        'Verification sent',
+        data.message || 'A verification link has been sent to your new email.'
+      );
+    } catch (error: any) {
+      showAlert(
+        'Error',
+        error?.message || 'Unable to send verification email.'
+      );
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -114,6 +164,32 @@ export default function EditProfileScreen() {
           ) : null}
         </View>
 
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your Gmail"
+            placeholderTextColor="#94A3B8"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              setEmailError('');
+            }}
+            editable={!isSaving}
+          />
+          {emailError ? (
+            <Text style={styles.validationText}>{emailError}</Text>
+          ) : null}
+          {pendingEmail ? (
+            <Text style={styles.pendingText}>
+              Pending: {pendingEmail}. Verify this Gmail first. Your current
+              email stays until then.
+            </Text>
+          ) : null}
+        </View>
+
         <LiftPressable
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
           onPress={() => void handleSaveChanges()}
@@ -125,6 +201,20 @@ export default function EditProfileScreen() {
             <Text style={styles.saveButtonText}>Save Changes</Text>
           )}
         </LiftPressable>
+
+        {pendingEmail ? (
+          <LiftPressable
+            style={[styles.resendButton, isResending && styles.saveButtonDisabled]}
+            onPress={() => void handleResendPending()}
+            disabled={isResending || isSaving}
+          >
+            {isResending ? (
+              <ActivityIndicator color="#323a8f" />
+            ) : (
+              <Text style={styles.resendButtonText}>Resend verification</Text>
+            )}
+          </LiftPressable>
+        ) : null}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -171,6 +261,12 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     marginTop: 4,
   },
+  pendingText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 6,
+    lineHeight: 18,
+  },
   saveButton: {
     height: 54,
     backgroundColor: '#323a8f',
@@ -192,6 +288,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     letterSpacing: 1,
+  },
+  resendButton: {
+    height: 48,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#323a8f',
+  },
+  resendButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#323a8f',
   },
   bottomSpacing: {
     height: 20,

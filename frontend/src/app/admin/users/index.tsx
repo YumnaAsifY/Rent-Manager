@@ -9,7 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import AdminShell from '@/components/admin/AdminShell';
@@ -22,6 +22,9 @@ import {
 
 export default function AdminUsersScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ view?: string | string[] }>();
+  const view = Array.isArray(params.view) ? params.view[0] : params.view;
+  const isManageView = view === 'manage';
   const { token } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -81,7 +84,7 @@ export default function AdminUsersScreen() {
   }, [search, users]);
 
   return (
-    <AdminShell title="Users">
+    <AdminShell title={isManageView ? 'Active Users' : 'Total Users'}>
       <View style={styles.flex}>
         <View style={[styles.searchWrap, isDesktop && styles.searchWrapDesktop]}>
           <Ionicons name="search" size={18} color="#7986CB" />
@@ -120,7 +123,11 @@ export default function AdminUsersScreen() {
               <TouchableOpacity
                 key={user.id}
                 style={[styles.card, isDesktop && styles.cardDesktop]}
-                onPress={() => router.push(`/admin/users/${user.id}` as any)}
+                onPress={() =>
+                  router.push(
+                    `/admin/users/${user.id}?view=${isManageView ? 'manage' : 'total'}` as any
+                  )
+                }
                 activeOpacity={0.75}
               >
                 <View style={styles.avatar}>
@@ -134,6 +141,7 @@ export default function AdminUsersScreen() {
                     <Text style={styles.name} numberOfLines={1}>
                       {user.name}
                     </Text>
+                    {isManageView ? (
                     <View
                       style={[
                         styles.badge,
@@ -151,6 +159,7 @@ export default function AdminUsersScreen() {
                         {user.isActive ? 'Active' : 'Deactivated'}
                       </Text>
                     </View>
+                    ) : null}
                   </View>
 
                   <Text style={styles.email} numberOfLines={1}>

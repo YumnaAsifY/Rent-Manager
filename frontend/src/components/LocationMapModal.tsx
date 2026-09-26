@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import LeafletWebMap from '@/components/LeafletWebMap';
 import { API_BASE_URL } from '@/services/api';
 
 type LeafletMap = {
@@ -149,8 +150,14 @@ export default function LocationMapModal({
   const [error, setError] = useState('');
   const [resolvedLabel, setResolvedLabel] = useState(location);
 
+  const [point, setPoint] = useState<{
+    lat: number;
+    lng: number;
+    label: string;
+  } | null>(null);
+
   useEffect(() => {
-    if (!visible || Platform.OS !== 'web') {
+    if (!visible) {
       return;
     }
 
@@ -161,19 +168,27 @@ export default function LocationMapModal({
       setLoading(true);
       setError('');
       setResolvedLabel(location);
+      setPoint(null);
 
       try {
-        const point = await resolveLocationPoint(location);
+        const found = await resolveLocationPoint(location);
         if (cancelled) {
           return;
         }
-        if (!point) {
+        if (!found) {
           setError('Could not find this location on the map.');
           setLoading(false);
           return;
         }
 
-        setResolvedLabel(point.label);
+        setResolvedLabel(found.label);
+        setPoint({ lat: found.lat, lng: found.lng, label: found.label });
+
+        if (Platform.OS !== 'web') {
+          setLoading(false);
+          return;
+        }
+
         loadStylesheet(LEAFLET_CSS);
         await loadScript(LEAFLET_JS);
         if (cancelled) {
@@ -189,7 +204,7 @@ export default function LocationMapModal({
         const leaflet = window.L;
         const instance = leaflet
           .map(containerRef.current)
-          .setView([point.lat, point.lng], 16);
+          .setView([found.lat, found.lng], 16);
         map = instance;
 
         leaflet
@@ -200,9 +215,9 @@ export default function LocationMapModal({
           .addTo(instance);
 
         leaflet
-          .marker({ lat: point.lat, lng: point.lng })
+          .marker({ lat: found.lat, lng: found.lng })
           .addTo(instance)
-          .bindPopup(point.label)
+          .bindPopup(found.label)
           .openPopup();
 
         setTimeout(() => instance.invalidateSize(), 200);
@@ -265,10 +280,25 @@ export default function LocationMapModal({
               ) : null}
             </View>
           ) : (
-            <View style={styles.nativeFallback}>
-              <Text style={styles.statusText}>
-                Open this screen in the web browser to view the map pin.
-              </Text>
+            <View style={styles.mapFrame}>
+              {loading ? (
+                <View style={styles.mapStatus}>
+                  <ActivityIndicator color="#323a8f" />
+                  <Text style={styles.statusText}>Finding exact location...</Text>
+                </View>
+              ) : null}
+              {error ? (
+                <View style={styles.mapStatus}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : point ? (
+                <LeafletWebMap
+                  initialLat={point.lat}
+                  initialLng={point.lng}
+                  initialLabel={point.label}
+                  zoom={16}
+                />
+              ) : null}
             </View>
           )}
         </View>
@@ -336,5 +366,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+    gap: 12,
+  },
+  openMapsButton: {
+    backgroundColor: '#323a8f',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  openMapsButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

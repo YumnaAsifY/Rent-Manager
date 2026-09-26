@@ -2,7 +2,11 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { sendPasswordResetEmail, sendVerificationEmail } = require('../utils/sendEmail');
+const {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+  sendEmailChangeVerification,
+} = require('../utils/sendEmail');
 const {
   PAYOUT_METHODS,
   serializePayout,
@@ -13,6 +17,7 @@ const serializePublicUser = (user) => ({
   name: user.name,
   phoneNumber: user.phoneNumber,
   email: user.email,
+  pendingEmail: user.pendingEmail || '',
   role: user.role === 'admin' ? 'admin' : 'user',
   isActive: user.isActive !== false,
   profileImage: user.profileImage || '',
@@ -91,6 +96,34 @@ const issueVerificationEmail = async (user) => {
   await sendVerificationEmail(user.email, buildVerifyEmailLink(rawToken));
 };
 
+const isPendingEmailChangeExpired = (user) => {
+  if (!user || !user.pendingEmail) {
+    return false;
+  }
+  if (!user.emailVerificationExpires) {
+    return true;
+  }
+  return new Date(user.emailVerificationExpires).getTime() <= Date.now();
+};
+
+const clearPendingEmailChange = (user) => {
+  user.pendingEmail = undefined;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+};
+
+const issuePendingEmailChange = async (user, pendingEmail) => {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  user.pendingEmail = pendingEmail;
+  user.emailVerificationToken = hashResetToken(rawToken);
+  user.emailVerificationExpires = new Date(Date.now() + VERIFICATION_WINDOW_MS);
+  await user.save();
+  await sendEmailChangeVerification(
+    pendingEmail,
+    buildVerifyEmailLink(rawToken)
+  );
+};
+
 const GENERIC_RESET_MESSAGE =
   'If this email is registered, a password reset link has been sent.';
 
@@ -118,12 +151,23 @@ const registerUser = async (req, res) => {
       });
     }
 
-    const existingEmail = await User.findOne({ email: normalizedEmail }).select(
-      '+emailVerificationExpires'
-    );
+    const existingEmail = await User.findOne({
+      $or: [{ email: normalizedEmail }, { pendingEmail: normalizedEmail }],
+    }).select('+emailVerificationExpires +emailVerificationToken');
 
     if (existingEmail) {
-      if (existingEmail.emailVerified !== true && isUnverifiedExpired(existingEmail)) {
+      const isLoginEmail = existingEmail.email === normalizedEmail;
+
+      if (!isLoginEmail) {
+        if (isPendingEmailChangeExpired(existingEmail)) {
+          clearPendingEmailChange(existingEmail);
+          await existingEmail.save();
+        } else {
+          return res.status(400).json({
+            message: 'Email is already registered',
+          });
+        }
+      } else if (existingEmail.emailVerified !== true && isUnverifiedExpired(existingEmail)) {
         await User.deleteOne({ _id: existingEmail._id });
       } else if (existingEmail.emailVerified !== true) {
         return res.status(400).json({
@@ -219,7 +263,8 @@ const loginUser = async (req, res) => {
 
     if (user.isActive === false) {
       return res.status(403).json({
-        message: 'This account has been deactivated',
+        code: 'ACCOUNT_DEACTIVATED',
+        message: 'An admin has deactivated your account.',
       });
     }
 
@@ -267,7 +312,9 @@ const loginUser = async (req, res) => {
 
 const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.userId).select(
+      '+emailVerificationExpires +emailVerificationToken'
+    );
 
     if (!user) {
       return res.status(401).json({
@@ -279,6 +326,11 @@ const getCurrentUser = async (req, res) => {
       return res.status(401).json({
         message: 'This account has been deactivated',
       });
+    }
+
+    if (isPendingEmailChangeExpired(user)) {
+      clearPendingEmailChange(user);
+      await user.save();
     }
 
     return res.status(200).json({
@@ -329,10 +381,18 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    const updates = {
-      name: trimmedName,
-      phoneNumber: trimmedPhoneNumber,
-    };
+    const user = await User.findById(req.userId).select(
+      '+emailVerificationToken +emailVerificationExpires'
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    user.name = trimmedName;
+    user.phoneNumber = trimmedPhoneNumber;
 
     if (payoutMethod !== undefined) {
       if (!PAYOUT_METHODS.includes(payoutMethod)) {
@@ -349,14 +409,21 @@ const updateProfile = async (req, res) => {
       const payoutBankName = String(req.body.payoutBankName || '').trim();
 
       if (payoutMethod === 'none') {
-        updates.payoutMethod = 'none';
-        updates.payoutAccountName = '';
-        updates.payoutNumber = '';
-        updates.payoutBankName = '';
+        user.payoutMethod = 'none';
+        user.payoutAccountName = '';
+        user.payoutNumber = '';
+        user.payoutBankName = '';
       } else {
         if (!payoutAccountName) {
           return res.status(400).json({
             message: 'Account holder name is required',
+          });
+        }
+
+        if (!/^[A-Za-z][A-Za-z '\u2019-]*$/.test(payoutAccountName)) {
+          return res.status(400).json({
+            message:
+              'Account holder name can contain letters, spaces, hyphen and apostrophe only',
           });
         }
 
@@ -378,30 +445,89 @@ const updateProfile = async (req, res) => {
           });
         }
 
-        updates.payoutMethod = payoutMethod;
-        updates.payoutAccountName = payoutAccountName;
-        updates.payoutNumber = payoutNumber;
-        updates.payoutBankName = payoutMethod === 'bank' ? payoutBankName : '';
+        user.payoutMethod = payoutMethod;
+        user.payoutAccountName = payoutAccountName;
+        user.payoutNumber = payoutNumber;
+        user.payoutBankName = payoutMethod === 'bank' ? payoutBankName : '';
       }
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.userId,
-      updates,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    let emailChangePending = false;
 
-    if (!user) {
-      return res.status(404).json({
-        message: 'User not found',
-      });
+    if (req.body.email !== undefined) {
+      if (typeof req.body.email !== 'string' || /[A-Z]/.test(req.body.email)) {
+        return res.status(400).json({
+          message: 'Email must contain lowercase letters only',
+        });
+      }
+
+      const normalizedEmail = req.body.email.trim().toLowerCase();
+
+      if (!/^[^\s@]+@gmail\.com$/.test(normalizedEmail)) {
+        return res.status(400).json({
+          message: 'Please enter a valid Gmail address',
+        });
+      }
+
+      if (normalizedEmail === user.email) {
+        if (user.pendingEmail) {
+          clearPendingEmailChange(user);
+        }
+        await user.save();
+      } else {
+        const emailOwner = await User.findOne({
+          $or: [{ email: normalizedEmail }, { pendingEmail: normalizedEmail }],
+          _id: { $ne: user._id },
+        }).select('+emailVerificationExpires +emailVerificationToken');
+
+        if (emailOwner) {
+          const isLoginEmail = emailOwner.email === normalizedEmail;
+
+          if (isLoginEmail) {
+            if (
+              emailOwner.emailVerified !== true &&
+              isUnverifiedExpired(emailOwner)
+            ) {
+              await User.deleteOne({ _id: emailOwner._id });
+            } else if (emailOwner.emailVerified !== true) {
+              return res.status(400).json({
+                message:
+                  'Email already exists and is pending. Please verify this registered email.',
+              });
+            } else {
+              return res.status(400).json({
+                message: 'Email is already registered',
+              });
+            }
+          } else if (isPendingEmailChangeExpired(emailOwner)) {
+            clearPendingEmailChange(emailOwner);
+            await emailOwner.save();
+          } else {
+            return res.status(400).json({
+              message: 'Email is already registered',
+            });
+          }
+        }
+
+        try {
+          await issuePendingEmailChange(user, normalizedEmail);
+          emailChangePending = true;
+        } catch (emailError) {
+          console.error('Email change verification error:', emailError);
+          return res.status(500).json({
+            message: 'Unable to send verification email. Please try again.',
+          });
+        }
+      }
+    } else {
+      await user.save();
     }
 
     return res.status(200).json({
-      message: 'Profile updated successfully',
+      message: emailChangePending
+        ? 'Verification sent to your new email. Your current email stays until you verify.'
+        : 'Profile updated successfully',
+      emailChangePending,
       user: serializePublicUser(user),
     });
   } catch (error) {
@@ -424,7 +550,7 @@ const updateProfileImage = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.userId,
       { profileImage: `/uploads/${req.file.filename}` },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!user) {
@@ -641,6 +767,45 @@ const verifyEmail = async (req, res) => {
       });
     }
 
+    if (user.pendingEmail) {
+      if (isPendingEmailChangeExpired(user)) {
+        clearPendingEmailChange(user);
+        await user.save();
+        return res.status(400).json({
+          status: 'expired',
+          code: 'EMAIL_CHANGE_EXPIRED',
+          message:
+            'This verification link has expired. Please update your email again from Edit Profile.',
+        });
+      }
+
+      const taken = await User.findOne({
+        email: user.pendingEmail,
+        _id: { $ne: user._id },
+      });
+
+      if (taken) {
+        clearPendingEmailChange(user);
+        await user.save();
+        return res.status(400).json({
+          status: 'invalid',
+          message: 'Email is already registered',
+        });
+      }
+
+      user.email = user.pendingEmail;
+      clearPendingEmailChange(user);
+      user.emailVerified = true;
+      await user.save();
+
+      return res.status(200).json({
+        status: 'email_updated',
+        message:
+          'Your new email has been verified. You can now log in with this email.',
+        email: user.email,
+      });
+    }
+
     if (user.emailVerified === true) {
       return res.status(200).json({
         status: 'already_verified',
@@ -688,14 +853,39 @@ const resendVerificationEmail = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email }).select(
-      '+emailVerificationToken +emailVerificationExpires'
-    );
+    const user = await User.findOne({
+      $or: [{ email }, { pendingEmail: email }],
+    }).select('+emailVerificationToken +emailVerificationExpires');
 
     if (!user) {
       return res.status(200).json({
         message:
           'If this email is registered and unverified, a verification link has been sent.',
+      });
+    }
+
+    if (user.pendingEmail) {
+      if (isPendingEmailChangeExpired(user)) {
+        clearPendingEmailChange(user);
+        await user.save();
+        return res.status(400).json({
+          code: 'EMAIL_CHANGE_EXPIRED',
+          message:
+            'This verification link has expired. Please update your email again from Edit Profile.',
+        });
+      }
+
+      try {
+        await issuePendingEmailChange(user, user.pendingEmail);
+      } catch (emailError) {
+        console.error('Resend email-change verification error:', emailError);
+        return res.status(500).json({
+          message: 'Unable to send verification email. Please try again.',
+        });
+      }
+
+      return res.status(200).json({
+        message: 'A verification link has been sent to your new email.',
       });
     }
 

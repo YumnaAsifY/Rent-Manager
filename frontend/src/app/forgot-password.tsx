@@ -12,6 +12,7 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [linkSent, setLinkSent] = useState(false);
 
   const isGmailAddress = (value: string) => {
     const trimmedEmail = value.trim();
@@ -50,6 +51,7 @@ export default function ForgotPasswordScreen() {
       });
 
       const sentTo = email.trim();
+      setLinkSent(true);
       showAlert(
         'Reset link sent',
         `We sent a password reset link to ${sentTo}.`
@@ -93,6 +95,7 @@ export default function ForgotPasswordScreen() {
             onChangeText={(text) => {
               setEmail(text);
               setEmailError('');
+              setLinkSent(false);
             }}
             editable={!isSubmitting}
           />
@@ -107,7 +110,11 @@ export default function ForgotPasswordScreen() {
           disabled={isSubmitting}
         >
           <Text style={styles.sendButtonText}>
-            {isSubmitting ? 'Sending...' : 'Send reset link'}
+            {isSubmitting
+              ? 'Sending...'
+              : linkSent
+                ? 'Resend link'
+                : 'Send reset link'}
           </Text>
         </LiftPressable>
 

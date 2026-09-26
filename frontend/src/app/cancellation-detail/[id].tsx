@@ -146,6 +146,17 @@ export default function CancellationDetailScreen() {
           <Text style={styles.sectionTitle}>Reason</Text>
           <Text style={styles.reasonText}>{reason}</Text>
 
+          <View style={styles.adminContactNote}>
+            <Ionicons
+              name="information-circle-outline"
+              size={18}
+              color="#323a8f"
+            />
+            <Text style={styles.adminContactNoteText}>
+              Admin may contact you about this matter.
+            </Text>
+          </View>
+
           {notification.relatedRentalId ? (
             <LiftPressable
               style={styles.linkButton}
@@ -273,6 +284,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     lineHeight: 22,
+  },
+  adminContactNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 14,
+    maxWidth: 280,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  adminContactNoteText: {
+    flexShrink: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#323a8f',
+    fontWeight: '600',
   },
   linkButton: {
     marginTop: 20,

@@ -67,6 +67,36 @@ const sendVerificationEmail = async (to, verifyLink) => {
   });
 };
 
+const sendEmailChangeVerification = async (to, verifyLink) => {
+  const transporter = createTransporter();
+  const safeHref = String(verifyLink).replace(/"/g, '&quot;');
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+    to,
+    subject: 'Verify your new Rent Manager email',
+    text: `You asked to change your Rent Manager account email to ${to}.\n\nPlease verify this new email. Until you verify, you will keep using your current email to log in.\n\nThis verification link expires in 24 hours.\n\nIf you did not request this, you can ignore this email.`,
+    html: `
+      <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1A1A1A;">
+        <p>You asked to change your <strong>Rent Manager</strong> account email to:</p>
+        <p><strong>${to}</strong></p>
+        <p>Please verify this new email. Until you verify, you will keep using your current email to log in.</p>
+        <p><strong>This verification link expires in 24 hours.</strong></p>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:20px 0;">
+          <tr>
+            <td align="center" bgcolor="#323a8f" style="border-radius:8px;">
+              <a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:14px 32px;font-family:Arial,sans-serif;font-size:16px;line-height:20px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:8px;background-color:#323a8f;border:1px solid #323a8f;">
+                Verify Email
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p>If you did not request this, you can ignore this email.</p>
+      </div>
+    `,
+  });
+};
+
 const sendContactEmail = async ({
   adminEmail,
   userName,
@@ -200,6 +230,7 @@ const sendTenantRemovalDisputeEmail = async ({
 module.exports = {
   sendPasswordResetEmail,
   sendVerificationEmail,
+  sendEmailChangeVerification,
   sendContactEmail,
   sendTenantRemovalDisputeEmail,
 };

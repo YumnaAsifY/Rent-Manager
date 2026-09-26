@@ -39,13 +39,11 @@ const rentalSchema = new mongoose.Schema(
       default: null,
     },
 
-    // Links acceptance to exactly one rental (prevents duplicates).
+    // Set only when created from an accepted rental request.
+    // Direct assign leaves this unset so many rentals can exist without a request.
     rentalRequest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'RentalRequest',
-      default: null,
-      unique: true,
-      sparse: true,
     },
 
     // Current lease on the asset vs historical record kept after Make Available.
@@ -77,5 +75,27 @@ const rentalSchema = new mongoose.Schema(
 );
 
 rentalSchema.index({ tenant: 1, createdAt: -1 });
+rentalSchema.index(
+  { rentalRequest: 1 },
+  {
+    unique: true,
+    name: 'rentalRequest_unique_when_set',
+    partialFilterExpression: { rentalRequest: { $type: 'objectId' } },
+  }
+);
 
-module.exports = mongoose.model('Rental', rentalSchema);
+const Rental = mongoose.model('Rental', rentalSchema);
+
+Rental.syncRentalRequestIndex = async function syncRentalRequestIndex() {
+  try {
+    await Rental.collection.dropIndex('rentalRequest_1');
+  } catch (error) {
+    if (error.code !== 27 && error.codeName !== 'IndexNotFound') {
+      throw error;
+    }
+  }
+
+  await Rental.syncIndexes();
+};
+
+module.exports = Rental;

@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
@@ -13,6 +14,7 @@ interface HeaderProps {
 
 export default function Header({ userName, onMenuPress }: HeaderProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -49,7 +51,15 @@ export default function Header({ userName, onMenuPress }: HeaderProps) {
   );
 
   return (
-    <View style={styles.headerContainer}>
+    <View
+      style={[
+        styles.headerContainer,
+        Platform.OS !== 'web' && {
+          paddingTop: Math.max(insets.top, 12) + 8,
+          minHeight: Math.max(insets.top, 12) + 56,
+        },
+      ]}
+    >
       <View style={styles.headerContent}>
         <View style={styles.headerRow}>
           {onMenuPress ? (

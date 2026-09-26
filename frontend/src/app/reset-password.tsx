@@ -131,7 +131,7 @@ export default function ResetPasswordScreen() {
                   }
                 >
                   <Ionicons
-                    name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                    name={showNewPassword ? 'eye-outline' : 'eye-off-outline'}
                     size={22}
                     color="#666666"
                   />
@@ -165,7 +165,7 @@ export default function ResetPasswordScreen() {
                   }
                 >
                   <Ionicons
-                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
                     size={22}
                     color="#666666"
                   />

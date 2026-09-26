@@ -371,7 +371,7 @@ const acceptRentalRequest = async (req, res) => {
         },
       },
       {
-        new: true,
+        returnDocument: 'after',
         session,
       }
     );

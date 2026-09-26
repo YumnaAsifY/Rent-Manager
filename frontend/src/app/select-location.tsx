@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import ScreenHeader from '../components/ScreenHeader';
 import LiftPressable from '../components/LiftPressable';
+import LeafletWebMap from '../components/LeafletWebMap';
 import { API_BASE_URL } from '@/services/api';
 import { publishLocationPick } from '@/utils/locationPicker';
 import { showAlert } from '@/utils/showAlert';
@@ -444,11 +445,14 @@ export default function SelectLocationScreen() {
             }}
           />
         ) : (
-          <View style={styles.nativeFallback}>
-            <Text style={styles.nativeFallbackText}>
-              Open this screen in the web browser to tap a location on the map.
-            </Text>
-          </View>
+          <LeafletWebMap
+            picker
+            zoom={12}
+            onSelect={finishSelection}
+            onReady={(api) => {
+              mapApiRef.current = api;
+            }}
+          />
         )}
       </View>
     </View>
@@ -530,17 +534,5 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 420,
     backgroundColor: '#E2E8F0',
-  },
-  nativeFallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  nativeFallbackText: {
-    fontSize: 15,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });
