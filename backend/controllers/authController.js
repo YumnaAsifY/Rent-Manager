@@ -657,7 +657,7 @@ const forgotPassword = async (req, res) => {
       user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
       await user.save();
 
-      const lanIp = process.env.LAN_IP || '10.42.214.228';
+      const lanIp = process.env.LAN_IP || '10.81.224.228';
       const expoPort = process.env.EXPO_PORT || '8081';
       const lanBrowserReset = `http://${lanIp}:${expoPort}/reset-password`;
       let webResetBase = (

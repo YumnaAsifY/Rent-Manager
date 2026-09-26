@@ -47,6 +47,7 @@ export default function MyAssetsScreen() {
   const [statusFilter, setStatusFilter] = useState<'Available' | 'Rented'>(
     'Available'
   );
+  const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
 
   const loadAssets = useCallback(async () => {
     if (!token) {
@@ -162,6 +163,12 @@ export default function MyAssetsScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          onLayout={(event) => {
+            const nextHeight = event.nativeEvent.layout.height;
+            if (nextHeight > 0 && nextHeight !== scrollViewportHeight) {
+              setScrollViewportHeight(nextHeight);
+            }
+          }}
         >
           {errorMessage ? (
             <View style={styles.centeredState}>
@@ -171,7 +178,13 @@ export default function MyAssetsScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <>
+            <View
+              style={
+                filteredAssets.length > 0 && scrollViewportHeight > 0
+                  ? { minHeight: scrollViewportHeight }
+                  : undefined
+              }
+            >
               <View style={styles.filterRow}>
                 {(['Available', 'Rented'] as const).map((status) => {
                   const isActive = statusFilter === status;
@@ -334,22 +347,18 @@ export default function MyAssetsScreen() {
               );
             })
               )}
-            </>
+            </View>
           )}
 
-          <View style={styles.bottomSpacing} />
+          <LiftPressable
+            style={styles.addButton}
+            onPress={() => router.push('/add-asset' as any)}
+          >
+            <Ionicons name="add" size={22} color="#323a8f" />
+            <Text style={styles.addButtonText}>Add asset</Text>
+          </LiftPressable>
         </ScrollView>
       )}
-
-      <View style={styles.fabWrapper}>
-        <LiftPressable
-          style={styles.addButton}
-          onPress={() => router.push('/add-asset' as any)}
-        >
-          <Ionicons name="add" size={22} color="#323a8f" />
-          <Text style={styles.addButtonText}>Add asset</Text>
-        </LiftPressable>
-      </View>
 
       <BottomNavigation />
 
@@ -393,8 +402,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 120,
-    flexGrow: 1,
+    paddingBottom: 24,
   },
   filterRow: {
     flexDirection: 'row',
@@ -577,15 +585,6 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.65,
   },
-  bottomSpacing: {
-    height: 20,
-  },
-  fabWrapper: {
-    position: 'absolute',
-    bottom: 80,
-    left: 20,
-    right: 20,
-  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -595,6 +594,8 @@ const styles = StyleSheet.create({
     borderColor: '#323a8f',
     borderRadius: 12,
     paddingVertical: 14,
+    marginTop: 8,
+    marginBottom: 12,
     gap: 8,
   },
   addButtonText: {

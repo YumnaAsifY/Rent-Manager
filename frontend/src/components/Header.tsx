@@ -55,8 +55,9 @@ export default function Header({ userName, onMenuPress }: HeaderProps) {
       style={[
         styles.headerContainer,
         Platform.OS !== 'web' && {
-          paddingTop: Math.max(insets.top, 12) + 8,
-          minHeight: Math.max(insets.top, 12) + 56,
+          paddingTop: Math.max(insets.top, 12) + 1,
+          minHeight: Math.max(insets.top, 12) + 42,
+          paddingBottom: 4,
         },
       ]}
     >
@@ -99,9 +100,9 @@ export default function Header({ userName, onMenuPress }: HeaderProps) {
 const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: '#323a8f',
-    minHeight: Platform.OS === 'web' ? 56 : 88,
-    paddingTop: Platform.OS === 'web' ? 10 : 42,
-    paddingBottom: 10,
+    minHeight: Platform.OS === 'web' ? 56 : 64,
+    paddingTop: Platform.OS === 'web' ? 10 : 32,
+    paddingBottom: Platform.OS === 'web' ? 10 : 4,
     paddingHorizontal: 16,
   },
   headerContent: {
@@ -113,6 +114,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: Platform.OS === 'web' ? 0 : -4,
   },
   menuButton: {
     width: 42,
@@ -127,13 +129,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 28,
+    fontSize: Platform.OS === 'web' ? 28 : 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: Platform.OS === 'web' ? 4 : 1,
   },
   welcomeText: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 16 : 14,
     color: 'rgba(255,255,255,0.85)',
     fontWeight: '500',
   },

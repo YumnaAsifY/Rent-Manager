@@ -5,18 +5,19 @@ import {
   StyleSheet,
   Platform,
   useWindowDimensions,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 import { fetchMyPendingRequestsCount } from '@/services/rentalRequests';
 
 export const navigationTabs = [
   { name: 'Home', icon: 'home', path: '/home' },
-  { name: 'Payment', icon: 'card', path: '/payment' },
   { name: 'Requests', icon: 'mail', path: '/requests' },
+  { name: 'Payment', icon: 'card', path: '/payment' },
   { name: 'Profile', icon: 'person', path: '/profile' },
 ];
 
@@ -26,6 +27,30 @@ export default function BottomNavigation() {
   const { width } = useWindowDimensions();
   const { token } = useAuth();
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      return;
+    }
+
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setIsKeyboardVisible(true);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,7 +84,7 @@ export default function BottomNavigation() {
     }, [token])
   );
 
-  if (Platform.OS === 'web' && width >= 768) {
+  if ((Platform.OS === 'web' && width >= 768) || isKeyboardVisible) {
     return null;
   }
 

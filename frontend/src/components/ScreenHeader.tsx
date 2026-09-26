@@ -48,8 +48,9 @@ export default function ScreenHeader({
         styles.header,
         isDark ? styles.darkHeader : styles.lightHeader,
         Platform.OS !== 'web' && {
-          paddingTop: topInset + 8,
-          minHeight: topInset + 52,
+          paddingTop: topInset + 1,
+          minHeight: topInset + 38,
+          paddingBottom: 4,
         },
       ]}
     >
@@ -80,9 +81,9 @@ export default function ScreenHeader({
 const styles = StyleSheet.create({
   header: {
     width: '100%',
-    minHeight: Platform.OS === 'web' ? 56 : 88,
-    paddingTop: Platform.OS === 'web' ? 10 : 42,
-    paddingBottom: 10,
+    minHeight: Platform.OS === 'web' ? 56 : 64,
+    paddingTop: Platform.OS === 'web' ? 10 : 32,
+    paddingBottom: Platform.OS === 'web' ? 10 : 4,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -100,6 +101,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: Platform.OS === 'web' ? 0 : -4,
   },
   backButton: {
     width: 36,
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flexShrink: 1,
-    fontSize: 20,
+    fontSize: Platform.OS === 'web' ? 20 : 17,
     fontWeight: '600',
   },
   rightAction: {
