@@ -38,6 +38,7 @@ export default function HomeScreen() {
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const isDesktop = Platform.OS === 'web' && width >= 768;
+  const mobileCardWidth = (width - 16 * 2 - 12) / 2;
 
   useFocusEffect(
     useCallback(() => {
@@ -150,6 +151,57 @@ export default function HomeScreen() {
       iconBg: '#E8DFFF',
     },
   ];
+
+  const hasPayout =
+    Boolean(user?.payoutMethod) && user?.payoutMethod !== 'none';
+  const payoutCard = {
+    id: 5,
+    title: 'Add payment method',
+    value: hasPayout
+      ? user?.payoutMethod === 'jazzcash'
+        ? 'JazzCash'
+        : user?.payoutMethod === 'easypaisa'
+          ? 'EasyPaisa'
+          : user?.payoutBankName || 'Bank'
+      : 'Not added yet',
+    subtitle: 'JazzCash, EasyPaisa or bank',
+    icon: 'wallet' as const,
+    onPress: () => router.push('/add-payment-method' as any),
+    cardBg: '#FFF7ED',
+    iconColor: '#EA580C',
+    iconBg: '#FFEDD5',
+    actionLabel: hasPayout ? 'Manage method' : 'Add method',
+  };
+
+  const renderHomeCard = (
+    card: {
+      title: string;
+      value?: string;
+      subtitle?: string;
+      icon: 'home' | 'business' | 'search' | 'wallet';
+      onPress: () => void;
+      cardBg: string;
+      iconColor: string;
+      iconBg: string;
+      actionLabel?: string;
+    },
+    desktop?: boolean
+  ) => (
+    <DashboardCard
+      title={card.title}
+      value={card.value}
+      subtitle={card.subtitle}
+      icon={card.icon}
+      onPress={card.onPress}
+      cardBg={card.cardBg}
+      iconColor={card.iconColor}
+      iconBg={card.iconBg}
+      desktop={desktop}
+      showViewDetails
+      actionLabel={card.actionLabel}
+      liftOnInteract
+    />
+  );
 
   if (isDesktop) {
     return (
@@ -353,36 +405,22 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              <View style={styles.desktopCardsGrid}>
+              <View
+                style={[
+                  styles.desktopCardsGrid,
+                  {
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  } as object,
+                ]}
+              >
                 {cards.map((card) => (
                   <View key={card.id} style={styles.desktopCardWrapper}>
-                    <DashboardCard
-                      title={card.title}
-                      value={card.value}
-                      subtitle={card.subtitle}
-                      icon={card.icon}
-                      onPress={card.onPress}
-                      cardBg={card.cardBg}
-                      iconColor={card.iconColor}
-                      iconBg={card.iconBg}
-                      desktop
-                      showViewDetails
-                      liftOnInteract
-                    />
+                    {renderHomeCard(card, true)}
                   </View>
                 ))}
-              </View>
-
-              <View style={styles.desktopBannerContainer}>
-                <View style={styles.banner}>
-                  <View style={styles.bannerContent}>
-                    <Text style={styles.bannerTitle}>
-                      Find Your Dream Asset
-                    </Text>
-                    <Text style={styles.bannerSubtitle}>
-                      Browse thousands of rental properties in your area
-                    </Text>
-                  </View>
+                <View key={payoutCard.id} style={styles.desktopCardWrapper}>
+                  {renderHomeCard(payoutCard, true)}
                 </View>
               </View>
             </View>
@@ -458,33 +496,25 @@ export default function HomeScreen() {
         />
 
         <View style={styles.cardsGrid}>
-          {cards.map((card) => (
-            <DashboardCard
-              key={card.id}
-              title={card.title}
-              value={card.value}
-              subtitle={card.subtitle}
-              icon={card.icon}
-              onPress={card.onPress}
-              cardBg={card.cardBg}
-              iconColor={card.iconColor}
-              iconBg={card.iconBg}
-              showViewDetails
-              liftOnInteract
-            />
-          ))}
-        </View>
-
-        {/* Explore Banner */}
-        <View style={styles.bannerContainer}>
-          <View style={styles.banner}>
-            <View style={styles.bannerContent}>
-              <Text style={styles.bannerTitle}>Find Your Dream Asset</Text>
-              <Text style={styles.bannerSubtitle}>
-                Browse thousands of rental properties in your area
-              </Text>
+          {[...cards, payoutCard].map((card) => (
+            <View key={card.id} style={[styles.mobileCardSlot, { width: mobileCardWidth }]}>
+              <DashboardCard
+                title={card.title}
+                value={card.value}
+                subtitle={card.subtitle}
+                icon={card.icon}
+                onPress={card.onPress}
+                cardBg={card.cardBg}
+                iconColor={card.iconColor}
+                iconBg={card.iconBg}
+                showViewDetails
+                actionLabel={'actionLabel' in card ? card.actionLabel : undefined}
+                liftOnInteract
+                compact
+                simple={card.id === 5}
+              />
             </View>
-          </View>
+          ))}
         </View>
       </ScrollView>
 
@@ -507,34 +537,16 @@ const styles = StyleSheet.create({
   cardsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    gap: 16,
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 12,
   },
-  bannerContainer: {
-    paddingHorizontal: 20,
-    marginTop: 8,
-  },
-  banner: {
-    backgroundColor: '#323a8f',
-    borderRadius: 16,
-    padding: 24,
-    minHeight: 120,
-    justifyContent: 'center',
-  },
-  bannerContent: {
-    maxWidth: 600,
-  },
-  bannerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 8,
-  },
-  bannerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.85)',
+  mobileCardSlot: {
+    height: 180,
+    minWidth: 0,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   desktopShell: {
     flex: 1,
@@ -808,18 +820,13 @@ const styles = StyleSheet.create({
     maxWidth: 420,
   },
   desktopCardsGrid: {
-    flexDirection: 'row',
     gap: 18,
     marginTop: -24,
     marginHorizontal: 28,
     zIndex: 1,
   },
   desktopCardWrapper: {
-    flex: 1,
     minWidth: 0,
-  },
-  desktopBannerContainer: {
-    marginTop: 22,
-    marginHorizontal: 28,
+    height: 220,
   },
 });

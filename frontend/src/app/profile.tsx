@@ -345,7 +345,7 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Alert, Image, Modal, Platform, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
@@ -384,6 +384,18 @@ export default function ProfileScreen() {
   );
   const [isSavingPayout, setIsSavingPayout] = useState(false);
   const [payoutAccountNameError, setPayoutAccountNameError] = useState('');
+
+  useEffect(() => {
+    setPayoutMethod(user?.payoutMethod || 'none');
+    setPayoutAccountName(user?.payoutAccountName || '');
+    setPayoutNumber(user?.payoutNumber || '');
+    setPayoutBankName(user?.payoutBankName || '');
+  }, [
+    user?.payoutMethod,
+    user?.payoutAccountName,
+    user?.payoutNumber,
+    user?.payoutBankName,
+  ]);
 
   const isValidAccountHolderName = (value: string) =>
     /^[A-Za-z][A-Za-z '\u2019-]*$/.test(value.trim());

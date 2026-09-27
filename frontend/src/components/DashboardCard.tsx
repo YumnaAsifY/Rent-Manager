@@ -118,7 +118,10 @@ interface DashboardCardProps {
   iconColor?: string;
   iconBg?: string;
   desktop?: boolean;
+  compact?: boolean;
+  simple?: boolean;
   showViewDetails?: boolean;
+  actionLabel?: string;
   liftOnInteract?: boolean;
 }
 
@@ -133,7 +136,10 @@ export default function DashboardCard({
   iconColor = '#323a8f',
   iconBg = '#e3f2fd',
   desktop = false,
+  compact = false,
+  simple = false,
   showViewDetails = false,
+  actionLabel = 'View Details',
   liftOnInteract = false,
 }: DashboardCardProps) {
   return (
@@ -141,30 +147,59 @@ export default function DashboardCard({
       lift={liftOnInteract}
       style={[
         styles.card,
-        isTablet && styles.cardTablet,
+        isTablet && !compact && !desktop && styles.cardTablet,
         desktop && styles.cardDesktop,
+        compact && styles.cardCompact,
+        compact && simple && styles.cardCompactSimple,
         { backgroundColor: cardBg },
       ]}
       onPress={onPress}
     >
-      <View style={styles.cardHeader}>
-        <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
-          <Ionicons name={icon} size={28} color={iconColor} />
+      <View style={[styles.cardBody, compact && styles.cardBodyCompact]}>
+        <View style={styles.cardHeader}>
+          <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
+            <Ionicons name={icon} size={compact ? 24 : 28} color={iconColor} />
+          </View>
+          {badge && <StatusBadge text={badge} />}
+          {compact && simple && showViewDetails ? (
+            <Ionicons
+              name="chevron-forward-circle"
+              size={20}
+              color={iconColor}
+            />
+          ) : null}
         </View>
-        {badge && <StatusBadge text={badge} />}
+
+        <Text
+          style={[styles.cardTitle, compact && simple && styles.cardTitleSimple]}
+          numberOfLines={desktop || compact ? 2 : undefined}
+        >
+          {title}
+        </Text>
+
+        {!simple && value ? (
+          <Text
+            style={[styles.cardValue, { color: iconColor }]}
+            numberOfLines={1}
+          >
+            {value}
+          </Text>
+        ) : null}
+        {!simple && subtitle ? (
+          <Text style={styles.cardSubtitle} numberOfLines={compact ? 1 : 2}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
 
-      <Text style={styles.cardTitle}>{title}</Text>
-
-      {value && <Text style={[styles.cardValue, { color: iconColor }]}>{value}</Text>}
-      {subtitle && <Text style={styles.cardSubtitle}>{subtitle}</Text>}
-
-      {showViewDetails ? (
+      {showViewDetails && !simple ? (
         <View style={styles.cardFooter}>
-          <Text style={styles.cardAction}>View Details</Text>
+          <Text style={styles.cardAction} numberOfLines={1}>
+            {actionLabel}
+          </Text>
           <Ionicons
             name="chevron-forward-circle"
-            size={24}
+            size={22}
             color={iconColor}
           />
         </View>
@@ -191,10 +226,33 @@ const styles = StyleSheet.create({
   cardTablet: {
     minWidth: '45%',
   },
+  cardCompact: {
+    flex: 0,
+    minWidth: 0,
+    width: '100%',
+    height: 180,
+    marginBottom: 0,
+    padding: 12,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  cardCompactSimple: {
+    padding: 12,
+  },
   cardDesktop: {
     minWidth: 0,
+    width: '100%',
+    height: '100%',
     marginBottom: 0,
-    minHeight: 180,
+    paddingBottom: 14,
+    overflow: 'visible',
+  },
+  cardBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cardBodyCompact: {
+    flex: 0,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -215,6 +273,11 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 4,
   },
+  cardTitleSimple: {
+    fontSize: 14,
+    lineHeight: 18,
+    marginBottom: 0,
+  },
   cardValue: {
     fontSize: 22,
     fontWeight: 'bold',
@@ -229,10 +292,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 15,
+    marginTop: 10,
+    gap: 8,
+    width: '100%',
+    minWidth: 0,
+    flexShrink: 0,
   },
   cardAction: {
-    fontSize: 14,
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    fontSize: 13,
     fontWeight: '600',
     color: '#666',
   },
