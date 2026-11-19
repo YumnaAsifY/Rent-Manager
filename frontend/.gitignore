@@ -41,5 +41,4 @@ example
 # generated native folders
 /ios
 /android
-backend/.env
-frontend/.env
+.env
