@@ -5,103 +5,157 @@ import {
   StyleSheet,
   Platform,
   useWindowDimensions,
+  ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { useCallback, useState } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import AdminShell from '@/components/admin/AdminShell';
-import DashboardCard from '@/components/DashboardCard';
+import { subscribeAdminRefresh } from '@/utils/adminRefresh';
+import { readAdminCache, writeAdminCache } from '@/utils/adminScreenCache';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAdminStats, type AdminStats } from '@/services/payments';
 
+function greetingForHour(hour: number) {
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+
+function formatToday(date: Date) {
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+type StatCard = {
+  id: string;
+  title: string;
+  value: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  subtitleIcon: keyof typeof Ionicons.glyphMap;
+  onPress?: () => void;
+  cardBg: string;
+  iconColor: string;
+  iconBg: string;
+  subtitleColor: string;
+};
+
 export default function AdminDashboardScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
-  const [stats, setStats] = useState<AdminStats>({
-    totalUsers: 0,
-    activeUsers: 0,
-    totalAssets: 0,
-    pendingSettlements: 0,
-  });
+  const initialStats = readAdminCache<AdminStats>('admin-stats');
+  const [stats, setStats] = useState<AdminStats>(
+    initialStats ?? {
+      totalUsers: 0,
+      activeUsers: 0,
+      totalAssets: 0,
+      pendingSettlements: 0,
+    }
+  );
+  const [loading, setLoading] = useState(initialStats === undefined);
+  const now = new Date();
+  const adminName = user?.name?.trim().split(' ')[0] || 'Admin';
+
+  const load = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    const cached = readAdminCache<AdminStats>('admin-stats');
+    if (cached === undefined) {
+      setLoading(true);
+    } else {
+      setStats(cached);
+      setLoading(false);
+    }
+
+    try {
+      const data = await fetchAdminStats(token);
+      writeAdminCache('admin-stats', data);
+      setStats(data);
+    } catch {
+      if (cached === undefined) {
+        setStats({
+          totalUsers: 0,
+          activeUsers: 0,
+          totalAssets: 0,
+          pendingSettlements: 0,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useFocusEffect(
     useCallback(() => {
-      let mounted = true;
-
-      const load = async () => {
-        if (!token) {
-          return;
-        }
-        try {
-          const data = await fetchAdminStats(token);
-          if (mounted) {
-            setStats(data);
-          }
-        } catch {
-          if (mounted) {
-            setStats({
-              totalUsers: 0,
-              activeUsers: 0,
-              totalAssets: 0,
-              pendingSettlements: 0,
-            });
-          }
-        }
-      };
-
       void load();
-      return () => {
-        mounted = false;
-      };
-    }, [token])
+      return subscribeAdminRefresh(() => {
+        void load();
+      });
+    }, [load])
   );
 
-  const cards = [
+  const cards: StatCard[] = [
     {
       id: 'total-users',
       title: 'Total Users',
       value: String(stats.totalUsers),
       subtitle: 'Registered accounts',
-      icon: 'people' as const,
-      onPress: () => router.push('/admin/users?view=total' as any),
-      cardBg: '#EEF4FF',
-      iconColor: '#4A7CF7',
-      iconBg: '#D6E4FF',
+      icon: 'people',
+      subtitleIcon: 'arrow-up',
+      onPress: () => router.replace('/admin/users?view=total' as any),
+      cardBg: '#F7F8FF',
+      iconColor: '#5B6CFF',
+      iconBg: '#E6E9FF',
+      subtitleColor: '#22A06B',
     },
     {
       id: 'active-users',
       title: 'Active Users',
       value: String(stats.activeUsers),
       subtitle: 'Can log in',
-      icon: 'checkmark-circle' as const,
-      onPress: () => router.push('/admin/users?view=manage' as any),
-      cardBg: '#F0FAF5',
-      iconColor: '#2EAD6E',
-      iconBg: '#D4F5E3',
+      icon: 'checkmark-circle',
+      subtitleIcon: 'ellipse',
+      onPress: () => router.replace('/admin/users?view=manage' as any),
+      cardBg: '#F3FBF6',
+      iconColor: '#22A06B',
+      iconBg: '#DDF6E8',
+      subtitleColor: '#22A06B',
     },
     {
       id: 'total-assets',
       title: 'Total Assets',
       value: String(stats.totalAssets),
       subtitle: 'Listed on platform',
-      icon: 'home' as const,
-      onPress: () => {},
-      cardBg: '#FFF8EE',
-      iconColor: '#E6A046',
-      iconBg: '#FFE8C8',
+      icon: 'home',
+      subtitleIcon: 'layers',
+      cardBg: '#FFF9F1',
+      iconColor: '#E6A23C',
+      iconBg: '#FFE8C4',
+      subtitleColor: '#E6A23C',
     },
     {
       id: 'pending-settlements',
       title: 'Pending Settlements',
       value: String(stats.pendingSettlements),
       subtitle: 'Awaiting owner payout',
-      icon: 'wallet' as const,
-      onPress: () => router.push('/admin/payments' as any),
-      cardBg: '#FFF5F5',
-      iconColor: '#E53935',
-      iconBg: '#FFCDD2',
+      icon: 'wallet',
+      subtitleIcon: 'time-outline',
+      onPress: () => router.replace('/admin/payments' as any),
+      cardBg: '#FFF6F7',
+      iconColor: '#E85D6A',
+      iconBg: '#FFE1E6',
+      subtitleColor: '#E85D6A',
     },
   ];
 
@@ -115,36 +169,81 @@ export default function AdminDashboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.welcome, isDesktop && styles.welcomeDesktop]}>
-          <Text style={styles.welcomeTitle}>Admin Dashboard</Text>
-          <Text style={styles.welcomeSubtitle}>
-            Overview of users, assets, and settlements
-          </Text>
+        <View style={styles.hero}>
+          <View style={styles.heroText}>
+            <Text style={[styles.greeting, isDesktop && styles.greetingDesktop]}>
+              {greetingForHour(now.getHours())},{'\n'}
+              {adminName}{' '}
+              <Text style={styles.wave}>👋</Text>
+            </Text>
+            <Text style={styles.heroSubtitle}>
+              Here's what's happening with your platform today.
+            </Text>
+          </View>
+          <View style={styles.dateChip}>
+            <Ionicons name="calendar-outline" size={16} color="#5B4DFF" />
+            <Text style={styles.dateText}>{formatToday(now)}</Text>
+          </View>
         </View>
 
-        <View style={[styles.grid, isDesktop && styles.gridDesktop]}>
-          {cards.map((card) => (
-            <View
-              key={card.id}
-              style={[
-                styles.cardWrap,
-                isDesktop ? styles.cardWrapDesktop : styles.cardWrapMobile,
-              ]}
-            >
-              <DashboardCard
-                title={card.title}
-                value={card.value}
-                subtitle={card.subtitle}
-                icon={card.icon}
-                onPress={card.onPress}
-                cardBg={card.cardBg}
-                iconColor={card.iconColor}
-                iconBg={card.iconBg}
-                desktop={isDesktop}
-              />
-            </View>
-          ))}
-        </View>
+        {loading ? (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color="#5B4DFF" />
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {cards.map((card) => {
+              const body = (
+                <>
+                  <View style={styles.cardTop}>
+                    <View style={[styles.iconBox, { backgroundColor: card.iconBg }]}>
+                      <Ionicons name={card.icon} size={22} color={card.iconColor} />
+                    </View>
+                    {card.onPress ? (
+                      <Ionicons name="chevron-forward" size={18} color="#C5CAD6" />
+                    ) : null}
+                  </View>
+                  <Text style={styles.cardTitle}>{card.title}</Text>
+                  <Text style={styles.cardValue}>{card.value}</Text>
+                  <View style={styles.subtitleRow}>
+                    <Ionicons
+                      name={card.subtitleIcon}
+                      size={12}
+                      color={card.subtitleColor}
+                    />
+                    <Text style={styles.cardSubtitle}>{card.subtitle}</Text>
+                  </View>
+                </>
+              );
+
+              return card.onPress ? (
+                <Pressable
+                  key={card.id}
+                  onPress={card.onPress}
+                  style={({ pressed }) => [
+                    styles.card,
+                    isDesktop && styles.cardDesktop,
+                    { backgroundColor: card.cardBg },
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  {body}
+                </Pressable>
+              ) : (
+                <View
+                  key={card.id}
+                  style={[
+                    styles.card,
+                    isDesktop && styles.cardDesktop,
+                    { backgroundColor: card.cardBg },
+                  ]}
+                >
+                  {body}
+                </View>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </AdminShell>
   );
@@ -154,6 +253,10 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
+  loadingState: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
   body: {
     padding: 16,
     paddingBottom: 28,
@@ -161,41 +264,130 @@ const styles = StyleSheet.create({
   bodyDesktop: {
     padding: 28,
     paddingBottom: 40,
+    maxWidth: 920,
+    width: '100%',
+    alignSelf: 'center',
   },
-  welcome: {
-    marginBottom: 16,
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 18,
   },
-  welcomeDesktop: {
-    marginBottom: 22,
+  heroText: {
+    flex: 1,
+    minWidth: 0,
   },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#323a8f',
-    marginBottom: 4,
+  greeting: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '800',
+    color: '#1B2346',
   },
-  welcomeSubtitle: {
+  greetingDesktop: {
+    fontSize: 32,
+    lineHeight: 38,
+  },
+  wave: {
+    fontSize: 24,
+  },
+  heroSubtitle: {
+    marginTop: 8,
     fontSize: 14,
-    color: '#5C6BC0',
     lineHeight: 20,
+    color: '#8B93A7',
+  },
+  dateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6EAF2',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  dateText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1B2346',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 12,
+  },
+  card: {
+    flexGrow: 1,
+    flexBasis: '46%',
+    maxWidth: '48%',
+    borderRadius: 22,
+    padding: 14,
+    minHeight: 148,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#1B2346',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 8px 24px rgba(27, 35, 70, 0.06)',
+      },
+    }),
+  },
+  cardDesktop: {
+    flexBasis: '47%',
+    maxWidth: '48%',
+    minHeight: 168,
+    padding: 18,
+  },
+  cardPressed: {
+    opacity: 0.92,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  gridDesktop: {
-    gap: 18,
+  iconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cardWrap: {
-    marginBottom: 4,
+  cardTitle: {
+    marginTop: 12,
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '700',
+    color: '#1B2346',
   },
-  cardWrapMobile: {
-    width: '48%',
+  cardValue: {
+    marginTop: 8,
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: '800',
+    color: '#1B2346',
   },
-  cardWrapDesktop: {
-    width: 'calc(50% - 9px)' as any,
-    flexGrow: 0,
-    flexShrink: 0,
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  cardSubtitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#8B93A7',
   },
 });

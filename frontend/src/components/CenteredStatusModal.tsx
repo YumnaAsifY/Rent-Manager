@@ -23,7 +23,7 @@ type CenteredStatusModalProps = {
 
 const ICON_BY_VARIANT = {
   success: { name: 'checkmark' as const, backgroundColor: '#22C55E' },
-  info: { name: 'mail-outline' as const, backgroundColor: '#323a8f' },
+  info: { name: 'mail-outline' as const, backgroundColor: '#5B4DFF' },
   error: { name: 'close' as const, backgroundColor: '#EF4444' },
 };
 
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
   button: {
     minWidth: 140,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 28,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   secondaryButtonText: {
-    color: '#323a8f',
+    color: '#5B4DFF',
     fontSize: 14,
     fontWeight: '700',
   },

@@ -5,8 +5,10 @@ export default function AdminLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: 'slide_from_right',
+        animation: 'none',
       }}
-    />
+    >
+      <Stack.Screen name="users/[id]" options={{ animation: 'slide_from_right' }} />
+    </Stack>
   );
 }

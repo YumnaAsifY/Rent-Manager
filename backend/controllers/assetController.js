@@ -4,6 +4,7 @@ const Rental = require('../models/Rental');
 const RentalRequest = require('../models/RentalRequest');
 const User = require('../models/User');
 const { getOwnerRentPaymentStatus } = require('../utils/billingCycle');
+const { parseCalendarDate } = require('../utils/calendarDate');
 const { findValidCategoryName } = require('./assetCategoryController');
 const { createNotification } = require('./notificationController');
 const { sendTenantRemovalDisputeEmail } = require('../utils/sendEmail');
@@ -14,6 +15,7 @@ const formatDate = (value) => {
   }
 
   return new Date(value).toLocaleDateString('en-GB', {
+    timeZone: 'Asia/Karachi',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -42,7 +44,7 @@ const serializeAsset = (asset) => {
     type: asset.type,
     location: asset.location,
     description: asset.description || '',
-    image: asset.image,
+    image: asset.image || '',
     status: asset.status,
     monthlyRent: asset.monthlyRent ?? null,
     rent:
@@ -319,10 +321,6 @@ const createAsset = async (req, res) => {
       return res.status(400).json({ message: 'Location is required' });
     }
 
-    if (!req.file) {
-      return res.status(400).json({ message: 'Asset image is required' });
-    }
-
     const rentRaw =
       req.body.monthlyRent !== undefined && req.body.monthlyRent !== null
         ? String(req.body.monthlyRent).trim()
@@ -347,7 +345,7 @@ const createAsset = async (req, res) => {
       type: validType,
       location,
       description,
-      image: `/uploads/${req.file.filename}`,
+      image: req.file ? `/uploads/${req.file.filename}` : '',
       owner: req.userId,
       status: 'Available',
       monthlyRent,
@@ -461,25 +459,6 @@ const updateAsset = async (req, res) => {
   }
 };
 
-const startOfDay = (date) => {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-};
-
-const parseDateInput = (value) => {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return parsed;
-};
-
 const assignAssetToTenant = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -533,25 +512,22 @@ const assignAssetToTenant = async (req, res) => {
       });
     }
 
-    const leaseStartDateRaw = parseDateInput(req.body.leaseStartDate);
-    const leaseEndDateRaw = parseDateInput(req.body.leaseEndDate);
+    const leaseStartDate = parseCalendarDate(req.body.leaseStartDate);
+    const leaseEndDate = parseCalendarDate(req.body.leaseEndDate);
 
-    if (!leaseStartDateRaw) {
+    if (!leaseStartDate) {
       await session.abortTransaction();
       return res.status(400).json({
         message: 'Please select start date',
       });
     }
 
-    if (!leaseEndDateRaw) {
+    if (!leaseEndDate) {
       await session.abortTransaction();
       return res.status(400).json({
         message: 'Please select end date',
       });
     }
-
-    const leaseStartDate = startOfDay(leaseStartDateRaw);
-    const leaseEndDate = startOfDay(leaseEndDateRaw);
 
     if (leaseEndDate.getTime() <= leaseStartDate.getTime()) {
       await session.abortTransaction();
@@ -843,6 +819,29 @@ const removeTenantFromAsset = async (req, res) => {
     } catch (emailError) {
       console.error('Tenant-removal dispute email error:', emailError);
     }
+
+    const admins = await User.find({
+      role: 'admin',
+      isActive: { $ne: false },
+    }).select('_id');
+
+    await Promise.all(
+      admins.map((admin) =>
+        createNotification({
+          recipient: admin._id,
+          type: 'admin_dispute_email',
+          title: 'You have received a dispute email',
+          message: `${ownerName} removed ${tenantName} from ${assetName}. Reason: ${reason}`,
+          relatedAsset: asset._id,
+          relatedRental: currentRental?._id || null,
+          cancellationReason: reason,
+          cancellationOwnerName: ownerName,
+          cancellationAssetName: assetName,
+          cancellationAssetType: asset.type || '',
+          cancellationAssetLocation: asset.location || '',
+        })
+      )
+    );
 
     return res.status(200).json({
       message: 'Tenant has been removed',

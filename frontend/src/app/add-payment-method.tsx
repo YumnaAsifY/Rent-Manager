@@ -48,7 +48,7 @@ const METHOD_OPTIONS: {
     label: 'Bank',
     hint: 'Account or IBAN',
     icon: 'card-outline',
-    color: '#323a8f',
+    color: '#5B4DFF',
     bg: '#EEF2FF',
   },
   {
@@ -160,7 +160,7 @@ export default function AddPaymentMethodScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <ScreenHeader title="Add payment method" variant="dark" />
 
       <ScrollView
@@ -174,7 +174,7 @@ export default function AddPaymentMethodScreen() {
       >
         <View style={styles.introCard}>
           <View style={styles.introIcon}>
-            <Ionicons name="wallet-outline" size={26} color="#323a8f" />
+            <Ionicons name="wallet-outline" size={26} color="#5B4DFF" />
           </View>
           <Text style={styles.introTitle}>Where should rent be sent?</Text>
           <Text style={styles.introText}>
@@ -323,7 +323,7 @@ export default function AddPaymentMethodScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   methodCardActive: {
-    borderColor: '#323a8f',
+    borderColor: '#5B4DFF',
     backgroundColor: '#F8FAFF',
   },
   methodIconWrap: {
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
   methodLabelActive: {
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   methodHint: {
     marginTop: 4,
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: '#0F172A',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
     marginBottom: 12,
   },
   errorText: {
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   saveButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

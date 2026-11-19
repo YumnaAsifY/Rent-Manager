@@ -16,6 +16,10 @@ export type PaymentSessionPayment = {
   rentalId: string;
   paidAt?: string | null;
   settledAt?: string | null;
+  tenantName?: string | null;
+  ownerName?: string | null;
+  assetName?: string | null;
+  assetLocation?: string | null;
 };
 
 export type CreatePaymentSessionResult = {
@@ -66,6 +70,9 @@ export type PaymentHistoryItem = {
   ownerShareAmount: number;
   adminProfitPercent?: number;
   adminProfitAmount?: number;
+  currency?: string;
+  safepayTracker?: string | null;
+  safepayEnvironment?: string | null;
   status: 'pending_settlement' | 'settled' | string;
   paidAt?: string | null;
   settledAt?: string | null;

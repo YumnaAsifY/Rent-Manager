@@ -258,7 +258,7 @@ export default function RequestsScreen() {
             <Ionicons
               name={isSelected ? 'checkbox' : 'square-outline'}
               size={22}
-              color={isSelected ? '#323a8f' : '#94A3B8'}
+              color={isSelected ? '#5B4DFF' : '#94A3B8'}
             />
           </View>
         ) : null}
@@ -342,7 +342,7 @@ export default function RequestsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading requests...</Text>
       </View>
     );
@@ -369,7 +369,7 @@ export default function RequestsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScreenHeader
         title="Requests"
@@ -483,7 +483,7 @@ const getStatusBg = (status: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingText: {
     marginTop: 12,
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
   selectionCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   deleteSelectedButton: {
     backgroundColor: '#EF4444',
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   cardSelected: {
-    borderColor: '#323a8f',
+    borderColor: '#5B4DFF',
     backgroundColor: '#F5F7FF',
   },
   checkboxWrap: {
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,

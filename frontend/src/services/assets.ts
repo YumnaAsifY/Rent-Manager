@@ -85,7 +85,7 @@ export type CreateAssetInput = {
   location: string;
   description?: string;
   monthlyRent?: string;
-  imageUri: string;
+  imageUri?: string | null;
   imageMimeType?: string | null;
   imageFileName?: string | null;
 };
@@ -206,14 +206,16 @@ export async function createAsset(
     formData.append('monthlyRent', input.monthlyRent.trim());
   }
 
-  formData.append(
-    'image',
-    (await buildImagePart(
-      input.imageUri,
-      input.imageMimeType,
-      input.imageFileName
-    )) as any
-  );
+  if (input.imageUri) {
+    formData.append(
+      'image',
+      (await buildImagePart(
+        input.imageUri,
+        input.imageMimeType,
+        input.imageFileName
+      )) as any
+    );
+  }
 
   let uploadResult: { ok: boolean; status: number; responseText: string };
 

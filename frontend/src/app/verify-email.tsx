@@ -111,7 +111,7 @@ export default function VerifyEmailScreen() {
   if (status === 'loading') {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Verifying your email...</Text>
       </View>
     );
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   note: {
     marginTop: 8,
     fontSize: 13,
-    color: '#323a8f',
+    color: '#5B4DFF',
     textAlign: 'center',
   },
 });

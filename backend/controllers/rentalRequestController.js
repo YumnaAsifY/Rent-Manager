@@ -3,32 +3,49 @@ const RentalRequest = require('../models/RentalRequest');
 const Asset = require('../models/Asset');
 const Rental = require('../models/Rental');
 const User = require('../models/User');
+const { parseCalendarDate } = require('../utils/calendarDate');
 const { createNotification } = require('./notificationController');
 
+// const formatDate = (value) => {
+//   if (!value) {
+//     return null;
+//   }
+
+//   return new Date(value).toLocaleDateString('en-GB', {
+//     day: 'numeric',
+//     month: 'long',
+//     year: 'numeric',
+//   });
+// };cursor
 const formatDate = (value) => {
   if (!value) {
     return null;
   }
 
   return new Date(value).toLocaleDateString('en-GB', {
+    timeZone: 'Asia/Karachi',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
 };
 
-const parseDateInput = (value) => {
-  if (!value) {
-    return null;
-  }
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
+// const parseDateInput = (value) => {
+//   if (!value) {
+//     return null;
+//   }
 
-  return parsed;
-};
+//   const parsed = new Date(value);
+//   if (Number.isNaN(parsed.getTime())) {
+//     return null;
+//   }
+
+//   return parsed;
+// };cursor
+const parseDateInput = (value) => parseCalendarDate(value);
+
+
 
 const startOfDay = (date) => {
   const next = new Date(date);
@@ -141,7 +158,7 @@ const createRentalRequest = async (req, res) => {
       return res.status(400).json({ message: 'Lease end date is required' });
     }
 
-    if (startOfDay(leaseEndDate).getTime() <= startOfDay(leaseStartDate).getTime()) {
+    if (leaseEndDate.getTime() <= leaseStartDate.getTime()) {
       return res.status(400).json({
         message: 'Lease end date must be after the start date',
       });
@@ -177,14 +194,24 @@ const createRentalRequest = async (req, res) => {
       });
     }
 
+    // const request = await RentalRequest.create({
+    //   asset: asset._id,
+    //   owner: asset.owner,
+    //   tenant: req.userId,
+    //   leaseStartDate: startOfDay(leaseStartDate),
+    //   leaseEndDate: startOfDay(leaseEndDate),
+    //   status: 'Pending',
+    // });cursor
+
     const request = await RentalRequest.create({
-      asset: asset._id,
-      owner: asset.owner,
-      tenant: req.userId,
-      leaseStartDate: startOfDay(leaseStartDate),
-      leaseEndDate: startOfDay(leaseEndDate),
-      status: 'Pending',
-    });
+  asset: asset._id,
+  owner: asset.owner,
+  tenant: req.userId,
+  leaseStartDate,
+  leaseEndDate,
+  status: 'Pending',
+});
+
 
     const tenantUser = await User.findById(req.userId).select('name');
     const tenantName = tenantUser?.name || 'A tenant';

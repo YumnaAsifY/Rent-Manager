@@ -25,7 +25,7 @@ export default function ScreenHeader({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDark = variant === 'dark';
-  const foregroundColor = isDark ? '#FFFFFF' : '#323a8f';
+  const foregroundColor = '#1B2346';
   const topInset = Platform.OS === 'web' ? 10 : Math.max(insets.top, 12);
 
   const handleBack = () => {
@@ -46,7 +46,7 @@ export default function ScreenHeader({
     <View
       style={[
         styles.header,
-        isDark ? styles.darkHeader : styles.lightHeader,
+        styles.lightHeader,
         Platform.OS !== 'web' && {
           paddingTop: topInset + 1,
           minHeight: topInset + 38,
@@ -58,7 +58,7 @@ export default function ScreenHeader({
         {showBack && (
           <TouchableOpacity
             onPress={handleBack}
-            style={styles.backButton}
+            style={[styles.backButton, isDark && styles.backButtonSoft]}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
@@ -91,10 +91,7 @@ const styles = StyleSheet.create({
   lightHeader: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E8EAF6',
-  },
-  darkHeader: {
-    backgroundColor: '#323a8f',
+    borderBottomColor: '#E8ECF4',
   },
   titleGroup: {
     minWidth: 0,
@@ -108,12 +105,16 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 4,
+    marginRight: 8,
+    borderRadius: 12,
+  },
+  backButtonSoft: {
+    backgroundColor: '#F4F6FB',
   },
   title: {
     flexShrink: 1,
     fontSize: Platform.OS === 'web' ? 20 : 17,
-    fontWeight: '600',
+    fontWeight: '800',
   },
   rightAction: {
     marginLeft: 12,

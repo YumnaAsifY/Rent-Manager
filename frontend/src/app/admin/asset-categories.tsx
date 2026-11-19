@@ -17,6 +17,8 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import AdminShell from '@/components/admin/AdminShell';
+import { subscribeAdminRefresh } from '@/utils/adminRefresh';
+import { readAdminCache, writeAdminCache } from '@/utils/adminScreenCache';
 import LiftPressable from '@/components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
@@ -31,9 +33,14 @@ export default function AdminAssetCategoriesScreen() {
   const { token } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
-  const [categories, setCategories] = useState<AdminAssetCategory[]>([]);
+  const initialCategories = readAdminCache<AdminAssetCategory[]>(
+    'admin-asset-categories'
+  );
+  const [categories, setCategories] = useState<AdminAssetCategory[]>(
+    initialCategories ?? []
+  );
   const [errorMessage, setErrorMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialCategories === undefined);
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [formError, setFormError] = useState('');
@@ -48,18 +55,28 @@ export default function AdminAssetCategoriesScreen() {
       return;
     }
 
-    setLoading(true);
+    const cached = readAdminCache<AdminAssetCategory[]>('admin-asset-categories');
+    if (cached === undefined) {
+      setLoading(true);
+    } else {
+      setCategories(cached);
+      setLoading(false);
+    }
+
     try {
       const data = await fetchAdminAssetCategories(token);
+      writeAdminCache('admin-asset-categories', data);
       setCategories(data);
       setErrorMessage('');
     } catch (error) {
-      setCategories([]);
-      setErrorMessage(
-        error instanceof ApiError
-          ? error.message
-          : 'Unable to load categories.'
-      );
+      if (cached === undefined) {
+        setCategories([]);
+        setErrorMessage(
+          error instanceof ApiError
+            ? error.message
+            : 'Unable to load categories.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -68,6 +85,9 @@ export default function AdminAssetCategoriesScreen() {
   useFocusEffect(
     useCallback(() => {
       void load();
+      return subscribeAdminRefresh(() => {
+        void load();
+      });
     }, [load])
   );
 
@@ -168,7 +188,7 @@ export default function AdminAssetCategoriesScreen() {
         >
           {loading ? (
             <View style={styles.emptyState}>
-              <ActivityIndicator size="large" color="#323a8f" />
+              <ActivityIndicator size="large" color="#5B4DFF" />
             </View>
           ) : errorMessage ? (
             <View style={styles.emptyState}>
@@ -193,7 +213,7 @@ export default function AdminAssetCategoriesScreen() {
                   style={[styles.card, isDesktop && styles.cardDesktop]}
                 >
                   <View style={styles.iconWrap}>
-                    <Ionicons name="pricetag" size={20} color="#323a8f" />
+                    <Ionicons name="pricetag" size={20} color="#5B4DFF" />
                   </View>
 
                   <View style={styles.cardBody}>
@@ -311,7 +331,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -412,7 +432,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   emptyText: {
     fontSize: 14,
@@ -477,7 +497,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   saveBtn: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     paddingHorizontal: 20,
     paddingVertical: 12,

@@ -28,6 +28,7 @@ import {
   PaymentHistoryItem,
   verifyPayment,
 } from '@/services/payments';
+import { downloadRentReceipt } from '@/utils/paymentReceipt';
 import ViewLocationButton from '../../components/ViewLocationButton';
 
 const { width } = Dimensions.get('window');
@@ -50,6 +51,7 @@ export default function PaymentScreen() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [payingRentalId, setPayingRentalId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!token) {
@@ -206,6 +208,44 @@ export default function PaymentScreen() {
         {item.settledDate ? (
           <Text style={styles.historyDate}>Settled: {item.settledDate}</Text>
         ) : null}
+        {item.status === 'pending_settlement' || item.status === 'settled' ? (
+          <TouchableOpacity
+            style={styles.receiptButton}
+            onPress={() => {
+              if (downloadingId) {
+                return;
+              }
+              setDownloadingId(item.id);
+              void downloadRentReceipt({
+                receiptNumber: item.id,
+                paidAt: item.paidAt,
+                tenantName: item.tenantName,
+                ownerName: item.ownerName,
+                assetName: item.assetName,
+                assetLocation: item.assetLocation,
+                amount: item.totalAmount,
+                currency: item.currency,
+                tracker: item.safepayTracker,
+                environment: item.safepayEnvironment,
+              })
+                .catch(() => {
+                  Alert.alert(
+                    'Receipt',
+                    'Unable to download the receipt. Please try again.'
+                  );
+                })
+                .finally(() => setDownloadingId(null));
+            }}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="download-outline" size={18} color="#5B4DFF" />
+            <Text style={styles.receiptButtonText}>
+              {downloadingId === item.id
+                ? 'Preparing receipt...'
+                : 'Download receipt'}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   };
@@ -213,7 +253,7 @@ export default function PaymentScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading payments...</Text>
       </View>
     );
@@ -221,7 +261,7 @@ export default function PaymentScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <ScreenHeader title="Payment" variant="dark" />
 
       <View style={styles.sectionTabs}>
@@ -392,7 +432,7 @@ export default function PaymentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   sectionTabs: {
     flexDirection: 'row',
@@ -413,8 +453,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sectionTabActive: {
-    backgroundColor: '#323a8f',
-    borderColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
+    borderColor: '#5B4DFF',
   },
   sectionTabText: {
     fontSize: 14,
@@ -436,7 +476,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingText: {
     marginTop: 12,
@@ -468,7 +508,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 12,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 10,
@@ -526,7 +566,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 16,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   feeNote: {
     marginTop: 6,
@@ -542,7 +582,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   payButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     minHeight: 46,
     flexDirection: 'row',
@@ -580,7 +620,7 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   statusBadgeTextPending: {
     color: '#B45309',
@@ -603,5 +643,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 13,
     color: '#64748B',
+  },
+  receiptButton: {
+    marginTop: 14,
+    minHeight: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#D9D6FF',
+    backgroundColor: '#F4F3FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  receiptButtonText: {
+    color: '#5B4DFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

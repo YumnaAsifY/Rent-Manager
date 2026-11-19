@@ -23,8 +23,9 @@ export default function ResetPasswordScreen() {
     const hasUpperCase = /[A-Z]/.test(pwd);
     const hasLowerCase = /[a-z]/.test(pwd);
     const hasNumber = /[0-9]/.test(pwd);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
     const hasMinLength = pwd.length >= 8;
-    return hasUpperCase && hasLowerCase && hasNumber && hasMinLength;
+    return hasUpperCase && hasLowerCase && hasNumber && hasSpecial && hasMinLength;
   };
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function ResetPasswordScreen() {
 
     if (!isPasswordValid(newPassword)) {
       setFormError(
-        'New password must be at least 8 characters with uppercase, lowercase, and number'
+        'New password must be at least 8 characters with uppercase, lowercase, number, and a special character'
       );
       return;
     }
@@ -214,7 +215,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: 1,
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     height: 54,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -304,6 +305,6 @@ const styles = StyleSheet.create({
   },
   backToLoginBold: {
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
 });

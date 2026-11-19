@@ -7,12 +7,15 @@ import {
   Platform,
   useWindowDimensions,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import AdminShell from '@/components/admin/AdminShell';
+import { subscribeAdminRefresh } from '@/utils/adminRefresh';
+import { readAdminCache, writeAdminCache } from '@/utils/adminScreenCache';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -28,46 +31,52 @@ export default function AdminUsersScreen() {
   const { token } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const initialUsers = readAdminCache<AdminUser[]>('admin-users');
+  const [users, setUsers] = useState<AdminUser[]>(initialUsers ?? []);
   const [search, setSearch] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(initialUsers === undefined);
+
+  const load = useCallback(async () => {
+    if (!token) {
+      setUsers([]);
+      setErrorMessage('Authentication required');
+      setLoading(false);
+      return;
+    }
+
+    const cached = readAdminCache<AdminUser[]>('admin-users');
+    if (cached === undefined) {
+      setLoading(true);
+    } else {
+      setUsers(cached);
+      setLoading(false);
+    }
+
+    try {
+      const data = await fetchAdminUsers(token);
+      writeAdminCache('admin-users', data);
+      setUsers(data);
+      setErrorMessage('');
+    } catch (error) {
+      if (cached === undefined) {
+        setUsers([]);
+        setErrorMessage(
+          error instanceof ApiError ? error.message : 'Unable to load users.'
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useFocusEffect(
     useCallback(() => {
-      let mounted = true;
-
-      const load = async () => {
-        if (!token) {
-          if (mounted) {
-            setUsers([]);
-            setErrorMessage('Authentication required');
-          }
-          return;
-        }
-
-        try {
-          const data = await fetchAdminUsers(token);
-          if (mounted) {
-            setUsers(data);
-            setErrorMessage('');
-          }
-        } catch (error) {
-          if (mounted) {
-            setUsers([]);
-            setErrorMessage(
-              error instanceof ApiError
-                ? error.message
-                : 'Unable to load users.'
-            );
-          }
-        }
-      };
-
       void load();
-      return () => {
-        mounted = false;
-      };
-    }, [token])
+      return subscribeAdminRefresh(() => {
+        void load();
+      });
+    }, [load])
   );
 
   const filtered = useMemo(() => {
@@ -106,7 +115,11 @@ export default function AdminUsersScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {errorMessage ? (
+          {loading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color="#5B4DFF" />
+            </View>
+          ) : errorMessage ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>{errorMessage}</Text>
             </View>
@@ -214,7 +227,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#323a8f',
+    color: '#5B4DFF',
     outlineStyle: 'none' as any,
   },
   scroll: {
@@ -243,7 +256,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 17,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   emptyText: {
     marginTop: 6,
@@ -275,7 +288,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   cardBody: {
     flex: 1,
@@ -291,7 +304,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   badge: {
     borderRadius: 20,

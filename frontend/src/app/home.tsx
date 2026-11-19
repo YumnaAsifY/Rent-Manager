@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import { usePathname, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useState, useCallback } from 'react';
 
 import Header from '../components/Header';
-import DashboardCard from '../components/DashboardCard';
 import BottomNavigation, {
   navigationTabs,
 } from '../components/BottomNavigation';
@@ -25,7 +25,48 @@ import { useAuth } from '@/context/AuthContext';
 import { fetchMyAssetsCount } from '@/services/assets';
 import { fetchMyRentalsCount } from '@/services/rentals';
 import { fetchMyPendingRequestsCount } from '@/services/rentalRequests';
-import { fetchUnreadNotificationsCount } from '@/services/notifications';
+import {
+  AppNotification,
+  fetchMyNotifications,
+  fetchUnreadNotificationsCount,
+  markNotificationAsRead,
+} from '@/services/notifications';
+
+type HomeCard = {
+  id: number;
+  title: string;
+  value?: string;
+  subtitle?: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  cardBg: string;
+  iconColor: string;
+  iconBg: string;
+  actionLabel?: string;
+};
+
+function activityIcon(type: string): keyof typeof Ionicons.glyphMap {
+  if (type.startsWith('payment_')) {
+    return 'card-outline';
+  }
+  if (type === 'tenancy_cancelled' || type.startsWith('cancellation_')) {
+    return 'close-circle-outline';
+  }
+  if (type.includes('request') || type === 'asset_assigned') {
+    return 'document-text-outline';
+  }
+  return 'notifications-outline';
+}
+
+function activityTint(type: string) {
+  if (type.startsWith('payment_')) {
+    return { backgroundColor: '#E7F8EE', color: '#16A34A' };
+  }
+  if (type === 'tenancy_cancelled' || type.startsWith('cancellation_')) {
+    return { backgroundColor: '#FDECEC', color: '#DC2626' };
+  }
+  return { backgroundColor: '#EEF0FF', color: '#4F46E5' };
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -33,12 +74,15 @@ export default function HomeScreen() {
   const { user, token, logout } = useAuth();
   const { width } = useWindowDimensions();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [ownedAssetsCount, setOwnedAssetsCount] = useState(0);
   const [myRentalsCount, setMyRentalsCount] = useState(0);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<AppNotification[]>([]);
   const isDesktop = Platform.OS === 'web' && width >= 768;
   const mobileCardWidth = (width - 16 * 2 - 12) / 2;
+  const showDesktopSidebar = isDesktop && !sidebarCollapsed;
 
   useFocusEffect(
     useCallback(() => {
@@ -51,17 +95,19 @@ export default function HomeScreen() {
             setMyRentalsCount(0);
             setPendingRequestsCount(0);
             setUnreadNotificationsCount(0);
+            setRecentActivity([]);
           }
           return;
         }
 
         try {
-          const [assetsCount, rentalsCount, pendingCount, unreadCount] =
+          const [assetsCount, rentalsCount, pendingCount, unreadCount, activity] =
             await Promise.all([
               fetchMyAssetsCount(token),
               fetchMyRentalsCount(token),
               fetchMyPendingRequestsCount(token),
               fetchUnreadNotificationsCount(token),
+              fetchMyNotifications(token).catch(() => [] as AppNotification[]),
             ]);
 
           if (isMounted) {
@@ -69,6 +115,7 @@ export default function HomeScreen() {
             setMyRentalsCount(rentalsCount);
             setPendingRequestsCount(pendingCount);
             setUnreadNotificationsCount(unreadCount);
+            setRecentActivity(activity.slice(0, 4));
           }
         } catch {
           if (isMounted) {
@@ -76,6 +123,7 @@ export default function HomeScreen() {
             setMyRentalsCount(0);
             setPendingRequestsCount(0);
             setUnreadNotificationsCount(0);
+            setRecentActivity([]);
           }
         }
       };
@@ -113,48 +161,43 @@ export default function HomeScreen() {
     ]);
   };
 
-  const cards = [
+  const cards: HomeCard[] = [
     {
       id: 1,
       title: 'My Assets',
       value:
-        ownedAssetsCount === 1
-          ? '1 Asset'
-          : `${ownedAssetsCount} Assets`,
-      icon: 'home' as const,
+        ownedAssetsCount === 1 ? '1 Asset' : `${ownedAssetsCount} Assets`,
+      icon: 'home',
       onPress: () => router.push('/properties' as any),
-      cardBg: '#EEF4FF',
-      iconColor: '#4A7CF7',
-      iconBg: '#D6E4FF',
+      cardBg: '#F4F1FF',
+      iconColor: '#5B4DFF',
+      iconBg: '#E4DEFF',
     },
     {
       id: 2,
       title: 'My Rentals',
-      value:
-        myRentalsCount === 1
-          ? '1 Rental'
-          : `${myRentalsCount} Rentals`,
-      icon: 'business' as const,
+      value: myRentalsCount === 1 ? '1 Rental' : `${myRentalsCount} Rentals`,
+      icon: 'business',
       onPress: () => router.push('/rentals' as any),
-      cardBg: '#F0FAF5',
-      iconColor: '#2EAD6E',
-      iconBg: '#D4F5E3',
+      cardBg: '#EEFBF4',
+      iconColor: '#16A34A',
+      iconBg: '#D8F5E4',
     },
     {
       id: 4,
       title: 'Explore Assets',
       subtitle: 'Find your desired asset',
-      icon: 'search' as const,
+      icon: 'search',
       onPress: () => router.push('/exploree' as any),
-      cardBg: '#F5F1FF',
-      iconColor: '#8B5CF6',
-      iconBg: '#E8DFFF',
+      cardBg: '#F6F3FF',
+      iconColor: '#7C3AED',
+      iconBg: '#E9E0FF',
     },
   ];
 
   const hasPayout =
     Boolean(user?.payoutMethod) && user?.payoutMethod !== 'none';
-  const payoutCard = {
+  const payoutCard: HomeCard = {
     id: 5,
     title: 'Add payment method',
     value: hasPayout
@@ -165,219 +208,434 @@ export default function HomeScreen() {
           : user?.payoutBankName || 'Bank'
       : 'Not added yet',
     subtitle: 'JazzCash, EasyPaisa or bank',
-    icon: 'wallet' as const,
+    icon: 'wallet',
     onPress: () => router.push('/add-payment-method' as any),
-    cardBg: '#FFF7ED',
+    cardBg: '#FFF6EE',
     iconColor: '#EA580C',
-    iconBg: '#FFEDD5',
+    iconBg: '#FFE6D2',
     actionLabel: hasPayout ? 'Manage method' : 'Add method',
   };
 
-  const renderHomeCard = (
-    card: {
-      title: string;
-      value?: string;
-      subtitle?: string;
-      icon: 'home' | 'business' | 'search' | 'wallet';
-      onPress: () => void;
-      cardBg: string;
-      iconColor: string;
-      iconBg: string;
-      actionLabel?: string;
-    },
-    desktop?: boolean
-  ) => (
-    <DashboardCard
-      title={card.title}
-      value={card.value}
-      subtitle={card.subtitle}
-      icon={card.icon}
+  const homeCards = [...cards, payoutCard];
+  const firstName = (user?.name || 'User').trim().split(' ')[0] || 'User';
+  const initial = firstName.charAt(0).toUpperCase();
+
+  const openActivity = async (notification: AppNotification) => {
+    if (!token) {
+      return;
+    }
+
+    if (!notification.isRead) {
+      try {
+        await markNotificationAsRead(token, notification.id);
+        setRecentActivity((prev) =>
+          prev.map((item) =>
+            item.id === notification.id
+              ? { ...item, isRead: true, read: true }
+              : item
+          )
+        );
+        setUnreadNotificationsCount((count) => Math.max(0, count - 1));
+      } catch {
+        // Still open the related screen if marking read fails.
+      }
+    }
+
+    if (notification.type === 'admin_dispute_email') {
+      return;
+    }
+
+    if (notification.relatedRequestId) {
+      router.push(`/request-details/${notification.relatedRequestId}` as any);
+      return;
+    }
+
+    if (notification.type === 'tenancy_cancelled') {
+      router.push(`/cancellation-detail/${notification.id}` as any);
+      return;
+    }
+
+    if (
+      notification.type === 'rental_request_accepted' ||
+      notification.type === 'asset_assigned'
+    ) {
+      router.push('/rentals' as any);
+      return;
+    }
+
+    if (notification.type.startsWith('payment_')) {
+      if (
+        notification.type === 'payment_received' ||
+        notification.type === 'payment_settled' ||
+        notification.type === 'payment_sent_to_admin'
+      ) {
+        router.push({
+          pathname: '/payment',
+          params: { section: 'history' },
+        } as any);
+        return;
+      }
+
+      if (notification.audience === 'owner') {
+        if (notification.relatedAssetId) {
+          router.push(`/property-details/${notification.relatedAssetId}` as any);
+          return;
+        }
+        router.push('/properties' as any);
+        return;
+      }
+
+      if (notification.relatedRentalId) {
+        router.push(`/rental-detail/${notification.relatedRentalId}` as any);
+        return;
+      }
+
+      router.push('/payment' as any);
+      return;
+    }
+
+    router.push('/notifications' as any);
+  };
+
+  const renderStatCard = (card: HomeCard) => (
+    <TouchableOpacity
+      key={card.id}
+      style={[styles.statCard, { backgroundColor: card.cardBg }]}
       onPress={card.onPress}
-      cardBg={card.cardBg}
-      iconColor={card.iconColor}
-      iconBg={card.iconBg}
-      desktop={desktop}
-      showViewDetails
-      actionLabel={card.actionLabel}
-      liftOnInteract
-    />
+      activeOpacity={0.88}
+    >
+      <View style={[styles.statIcon, { backgroundColor: card.iconBg }]}>
+        <Ionicons name={card.icon} size={22} color={card.iconColor} />
+      </View>
+      <Text style={styles.statTitle} numberOfLines={1}>
+        {card.title}
+      </Text>
+      {card.value ? (
+        <Text style={[styles.statValue, { color: card.iconColor }]} numberOfLines={1}>
+          {card.value}
+        </Text>
+      ) : null}
+      {card.subtitle ? (
+        <Text style={styles.statSubtitle} numberOfLines={1}>
+          {card.subtitle}
+        </Text>
+      ) : (
+        <View style={styles.statSubtitleSpacer} />
+      )}
+      <View style={styles.statFooter}>
+        <Text style={styles.statAction} numberOfLines={1}>
+          {card.actionLabel || 'View Details'}
+        </Text>
+        <View style={[styles.statArrow, { backgroundColor: card.iconColor }]}>
+          <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderActivity = () => (
+    <View style={styles.activityCard}>
+      <View style={styles.activityHeader}>
+        <View style={styles.activityTitleRow}>
+          <View style={styles.activityTitleIcon}>
+            <Ionicons name="calendar-outline" size={16} color="#5B4DFF" />
+          </View>
+          <Text style={styles.activityTitle}>Recent Activity</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => router.push('/notifications' as any)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="View all notifications"
+        >
+          <Text style={styles.activityViewAll}>View all →</Text>
+        </TouchableOpacity>
+      </View>
+
+      {recentActivity.length === 0 ? (
+        <Text style={styles.activityEmpty}>No recent activity</Text>
+      ) : (
+        recentActivity.map((item, index) => {
+          const tint = activityTint(item.type);
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.activityRow,
+                index < recentActivity.length - 1 && styles.activityRowBorder,
+              ]}
+              onPress={() => void openActivity(item)}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.activityIconWrap, { backgroundColor: tint.backgroundColor }]}>
+                <Ionicons name={activityIcon(item.type)} size={18} color={tint.color} />
+              </View>
+              <View style={styles.activityCopy}>
+                <Text style={styles.activityItemTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.activityItemMessage} numberOfLines={1}>
+                  {item.message}
+                </Text>
+              </View>
+              <Text style={styles.activityTime} numberOfLines={1}>
+                {item.time}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          );
+        })
+      )}
+    </View>
+  );
+
+  const renderSidebar = (desktop: boolean) => (
+    <View style={desktop ? styles.sidebar : styles.mobileMenuCard}>
+      {desktop ? (
+        <View style={styles.sidebarBrandRow}>
+          <View style={styles.sidebarBrand}>
+            <View style={styles.sidebarLogo}>
+              <Ionicons name="home" size={18} color="#FFFFFF" />
+            </View>
+            <View>
+              <Text style={styles.sidebarBrandText}>RENT MANAGER</Text>
+              <Text style={styles.sidebarBrandSub}>Welcome to Rent Manager</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.sidebarCloseButton}
+            onPress={() => setSidebarCollapsed(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Close navigation menu"
+          >
+            <Ionicons name="menu" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      <View style={desktop ? styles.sidebarNavigation : undefined}>
+        {desktop
+          ? navigationTabs.map((tab) => {
+          const isActive = pathname === tab.path;
+          const showBadge = tab.name === 'Requests' && pendingRequestsCount > 0;
+
+          return (
+            <TouchableOpacity
+              key={tab.name}
+              style={[
+                desktop ? styles.sidebarItem : styles.mobileMenuRow,
+                desktop && isActive && styles.sidebarItemActive,
+              ]}
+              onPress={() => {
+                if (desktop) {
+                  setSidebarCollapsed(false);
+                } else {
+                  setIsSidebarOpen(false);
+                }
+                if (tab.path === '/profile') {
+                  router.push({
+                    pathname: '/profile',
+                    params: { source: 'sidebar' },
+                  } as any);
+                  return;
+                }
+                router.push(tab.path as any);
+              }}
+              activeOpacity={0.75}
+            >
+              <View style={desktop ? styles.sidebarIconWrapper : styles.mobileMenuIconWrap}>
+                <Ionicons
+                  name={
+                    isActive
+                      ? (tab.icon as any)
+                      : (`${tab.icon}-outline` as any)
+                  }
+                  size={desktop ? 20 : 18}
+                  color={desktop ? '#FFFFFF' : '#5B4DFF'}
+                />
+                {showBadge && desktop ? (
+                  <View style={styles.sidebarBadge}>
+                    <Text style={styles.sidebarBadgeText}>
+                      {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={desktop ? styles.sidebarItemText : styles.mobileMenuItemText}>
+                {tab.name}
+              </Text>
+              {showBadge && !desktop ? (
+                <View style={styles.mobileBadge}>
+                  <Text style={styles.sidebarBadgeText}>
+                    {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                  </Text>
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })
+          : null}
+
+        <TouchableOpacity
+          style={[
+            desktop ? styles.sidebarItem : styles.mobileMenuRow,
+            desktop && pathname === '/contact' && styles.sidebarItemActive,
+          ]}
+          onPress={() => {
+            if (!desktop) {
+              setIsSidebarOpen(false);
+            }
+            router.push('/contact' as any);
+          }}
+          activeOpacity={0.75}
+        >
+          <View style={desktop ? styles.sidebarIconWrapper : styles.mobileMenuIconWrap}>
+            <Ionicons
+              name={
+                (pathname === '/contact'
+                  ? 'chatbubble-ellipses'
+                  : 'chatbubble-ellipses-outline') as any
+              }
+              size={desktop ? 20 : 18}
+              color={desktop ? '#FFFFFF' : '#5B4DFF'}
+            />
+          </View>
+          <Text style={desktop ? styles.sidebarItemText : styles.mobileMenuItemText}>
+            Contact Us
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {desktop ? (
+        <View style={styles.sidebarFooter}>
+          <Text style={styles.sidebarTagline}>Better Rentals</Text>
+          <Text style={styles.sidebarTaglineStrong}>Brighter Future</Text>
+          <View style={styles.sidebarFooterDivider} />
+          <TouchableOpacity
+            style={styles.sidebarItem}
+            onPress={handleLogoutPress}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Logout"
+          >
+            <View style={styles.sidebarIconWrapper}>
+              <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.sidebarItemText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <View style={styles.mobileMenuDivider} />
+          <TouchableOpacity
+            style={styles.mobileMenuRow}
+            onPress={() => {
+              setIsSidebarOpen(false);
+              handleLogoutPress();
+            }}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.mobileMenuIconWrap, styles.mobileMenuLogoutIcon]}>
+              <Ionicons name="log-out-outline" size={18} color="#E53935" />
+            </View>
+            <Text style={styles.mobileMenuLogoutText}>Logout</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+
+  const renderHero = (desktop: boolean) => (
+    <View style={desktop ? styles.hero : styles.heroMobile}>
+      <Image
+        source={require('@/assets/images/home-hero.png')}
+        style={styles.heroImage}
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={['#F7F8FF', 'rgba(247,248,255,0.72)', 'rgba(247,248,255,0)']}
+        locations={[0, 0.42, 0.68]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={desktop ? styles.heroCopy : styles.heroCopyMobile}>
+        <Text style={styles.heroKicker}>WELCOME BACK, {firstName.toUpperCase()}</Text>
+        <Text style={desktop ? styles.heroTitle : styles.heroTitleMobile}>
+          Ease your renting system
+        </Text>
+        {desktop ? (
+          <Text style={styles.heroSubtitle}>
+            Manage your assets, rentals, and next move in one convenient place.
+          </Text>
+        ) : null}
+        <TouchableOpacity
+          style={styles.heroButton}
+          onPress={() => router.push('/exploree' as any)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.heroButtonText}>Explore Assets</Text>
+          <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
   if (isDesktop) {
     return (
       <View style={styles.desktopShell}>
-        {isSidebarOpen && (
-          <View style={styles.sidebar}>
-            <View style={styles.sidebarBrandRow}>
-              <View style={styles.sidebarBrand}>
-                <Ionicons name="business" size={26} color="#ffffff" />
-                <Text style={styles.sidebarBrandText}>Rent Manager</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.sidebarCloseButton}
-                onPress={() => setIsSidebarOpen(false)}
-                accessibilityRole="button"
-                accessibilityLabel="Close navigation menu"
-              >
-                <Ionicons name="close" size={24} color="#ffffff" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.sidebarNavigation}>
-              {navigationTabs.map((tab) => {
-                const isActive = pathname === tab.path;
-                const showBadge =
-                  tab.name === 'Requests' && pendingRequestsCount > 0;
-
-                return (
-                  <TouchableOpacity
-                    key={tab.name}
-                    style={[
-                      styles.sidebarItem,
-                      isActive && styles.sidebarItemActive,
-                    ]}
-                    onPress={() => {
-                      setIsSidebarOpen(false);
-                      if (tab.path === '/profile') {
-                        router.push({
-                          pathname: '/profile',
-                          params: { source: 'sidebar' },
-                        } as any);
-                        return;
-                      }
-                      router.push(tab.path as any);
-                    }}
-                    activeOpacity={0.75}
-                  >
-                    <View style={styles.sidebarIconWrapper}>
-                      <Ionicons
-                        name={
-                          isActive
-                            ? (tab.icon as any)
-                            : (`${tab.icon}-outline` as any)
-                        }
-                        size={23}
-                        color="#ffffff"
-                      />
-                      {showBadge && (
-                        <View style={styles.sidebarBadge}>
-                          <Text style={styles.sidebarBadgeText}>
-                            {pendingRequestsCount > 9
-                              ? '9+'
-                              : pendingRequestsCount}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.sidebarItemText}>{tab.name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-              <TouchableOpacity
-                style={[
-                  styles.sidebarItem,
-                  pathname === '/contact' && styles.sidebarItemActive,
-                ]}
-                onPress={() => {
-                  setIsSidebarOpen(false);
-                  router.push('/contact' as any);
-                }}
-                activeOpacity={0.75}
-              >
-                <View style={styles.sidebarIconWrapper}>
-                  <Ionicons
-                    name={
-                      (pathname === '/contact'
-                        ? 'chatbubble-ellipses'
-                        : 'chatbubble-ellipses-outline') as any
-                    }
-                    size={23}
-                    color="#ffffff"
-                  />
-                </View>
-                <Text style={styles.sidebarItemText}>Contact Us</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.sidebarFooter}>
-              <View style={styles.sidebarFooterDivider} />
-              <TouchableOpacity
-                style={styles.sidebarItem}
-                onPress={handleLogoutPress}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel="Logout"
-              >
-                <View style={styles.sidebarIconWrapper}>
-                  <Ionicons
-                    name="log-out-outline"
-                    size={23}
-                    color="#ffffff"
-                  />
-                </View>
-                <Text style={styles.sidebarItemText}>Logout</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
         <View style={styles.desktopMain}>
           <View style={styles.desktopHeader}>
-            <View style={styles.desktopHeaderContent}>
+            {!showDesktopSidebar ? (
               <TouchableOpacity
-                style={styles.menuButton}
-                onPress={() => setIsSidebarOpen((open) => !open)}
+                style={styles.reopenButton}
+                onPress={() => setSidebarCollapsed(false)}
                 accessibilityRole="button"
                 accessibilityLabel="Open navigation menu"
               >
-                <Ionicons name="menu" size={30} color="#FFFFFF" />
+                <Ionicons name="menu" size={22} color="#1B2346" />
               </TouchableOpacity>
+            ) : (
+              <View style={styles.headerSpacer} />
+            )}
 
-              <View style={styles.desktopUserInfo}>
-                <Text style={styles.desktopUserName}>
-                  {user?.name || 'User'}
-                </Text>
-                <Text style={styles.desktopWelcomeText}>
-                  Welcome to Rent Manager
-                </Text>
-              </View>
-
-              <View style={styles.desktopHeaderActions}>
-                <TouchableOpacity
-                  style={styles.desktopNotificationButton}
-                  onPress={() => router.push('/notifications' as any)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="notifications-outline"
-                    size={28}
-                    color="#FFFFFF"
-                  />
-                  {unreadNotificationsCount > 0 ? (
-                    <View style={styles.notificationBadge}>
-                      <Text style={styles.notificationBadgeText}>
-                        {unreadNotificationsCount > 9
-                          ? '9+'
-                          : unreadNotificationsCount}
-                      </Text>
-                    </View>
-                  ) : null}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.desktopProfileButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/profile',
-                      params: { source: 'header' },
-                    } as any)
-                  }
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open profile"
-                >
-                  <Ionicons name="person" size={20} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
+            <View style={styles.desktopHeaderActions}>
+              <TouchableOpacity
+                style={styles.desktopNotificationButton}
+                onPress={() => router.push('/notifications' as any)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Open notifications"
+              >
+                <Ionicons name="notifications-outline" size={22} color="#1B2346" />
+                {unreadNotificationsCount > 0 ? (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.userChip}
+                onPress={() =>
+                  router.push({
+                    pathname: '/profile',
+                    params: { source: 'header' },
+                  } as any)
+                }
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Open profile"
+              >
+                <View style={styles.userAvatar}>
+                  <Text style={styles.userAvatarText}>{initial}</Text>
+                </View>
+                <View>
+                  <Text style={styles.desktopUserName}>{user?.name || 'User'}</Text>
+                  <Text style={styles.desktopWelcomeText}>Welcome to Rent Manager</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -387,42 +645,15 @@ export default function HomeScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.desktopContent}>
-              <View style={styles.hero}>
-                <Image
-                  source={require('@/assets/images/home-hero.png')}
-                  style={styles.heroImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.heroCopy}>
-                  <Text style={styles.heroTitle}>
-                    Ease your renting system
-                  </Text>
-                  <View style={styles.heroAccent} />
-                  <Text style={styles.heroSubtitle}>
-                    Manage your assets, rentals, and next move in one
-                    convenient place.
-                  </Text>
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.desktopCardsGrid,
-                  {
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                  } as object,
-                ]}
-              >
-                {cards.map((card) => (
+              {renderHero(true)}
+              <View style={styles.desktopCardsGrid}>
+                {homeCards.map((card) => (
                   <View key={card.id} style={styles.desktopCardWrapper}>
-                    {renderHomeCard(card, true)}
+                    {renderStatCard(card)}
                   </View>
                 ))}
-                <View key={payoutCard.id} style={styles.desktopCardWrapper}>
-                  {renderHomeCard(payoutCard, true)}
-                </View>
               </View>
+              {renderActivity()}
             </View>
           </ScrollView>
         </View>
@@ -443,49 +674,14 @@ export default function HomeScreen() {
             style={styles.mobileMenuOverlay}
             onPress={() => setIsSidebarOpen(false)}
           >
-            <Pressable
-              style={styles.mobileMenuCard}
-              onPress={(event) => event.stopPropagation()}
-            >
-              <TouchableOpacity
-                style={styles.mobileMenuRow}
-                onPress={() => {
-                  setIsSidebarOpen(false);
-                  router.push('/contact' as any);
-                }}
-                activeOpacity={0.75}
-              >
-                <View style={styles.mobileMenuIconWrap}>
-                  <Ionicons
-                    name="chatbubble-ellipses-outline"
-                    size={20}
-                    color="#323a8f"
-                  />
-                </View>
-                <Text style={styles.mobileMenuItemText}>Contact Us</Text>
-              </TouchableOpacity>
-
-              <View style={styles.mobileMenuDivider} />
-
-              <TouchableOpacity
-                style={styles.mobileMenuRow}
-                onPress={() => {
-                  setIsSidebarOpen(false);
-                  handleLogoutPress();
-                }}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.mobileMenuIconWrap, styles.mobileMenuLogoutIcon]}>
-                  <Ionicons name="log-out-outline" size={20} color="#E53935" />
-                </View>
-                <Text style={styles.mobileMenuLogoutText}>Logout</Text>
-              </TouchableOpacity>
+            <Pressable onPress={(event) => event.stopPropagation()}>
+              {renderSidebar(false)}
             </Pressable>
           </Pressable>
         </Modal>
       ) : null}
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -494,27 +690,16 @@ export default function HomeScreen() {
           userName={user?.name || 'User'}
           onMenuPress={() => setIsSidebarOpen(true)}
         />
-
-        <View style={styles.cardsGrid}>
-          {[...cards, payoutCard].map((card) => (
-            <View key={card.id} style={[styles.mobileCardSlot, { width: mobileCardWidth }]}>
-              <DashboardCard
-                title={card.title}
-                value={card.value}
-                subtitle={card.subtitle}
-                icon={card.icon}
-                onPress={card.onPress}
-                cardBg={card.cardBg}
-                iconColor={card.iconColor}
-                iconBg={card.iconBg}
-                showViewDetails
-                actionLabel={'actionLabel' in card ? card.actionLabel : undefined}
-                liftOnInteract
-                compact
-                simple={card.id === 5}
-              />
-            </View>
-          ))}
+        <View style={styles.mobileBody}>
+          {renderHero(false)}
+          <View style={styles.cardsGrid}>
+            {homeCards.map((card) => (
+              <View key={card.id} style={[styles.mobileCardSlot, { width: mobileCardWidth }]}>
+                {renderStatCard(card)}
+              </View>
+            ))}
+          </View>
+          {renderActivity()}
         </View>
       </ScrollView>
 
@@ -526,85 +711,97 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 24,
+  },
+  mobileBody: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 14,
   },
   cardsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    alignItems: 'flex-start',
-    paddingHorizontal: 16,
-    paddingTop: 16,
     gap: 12,
   },
   mobileCardSlot: {
-    height: 180,
     minWidth: 0,
-    flexGrow: 0,
-    flexShrink: 0,
   },
   desktopShell: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F4F6FB',
   },
   sidebar: {
-    width: 250,
-    backgroundColor: '#323a8f',
+    width: 248,
+    backgroundColor: '#1B2346',
     paddingHorizontal: 16,
     paddingTop: 22,
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
   sidebarBrandRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 28,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.18)',
+    paddingBottom: 22,
   },
   sidebarBrand: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+    minWidth: 0,
   },
-  sidebarBrandText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  sidebarCloseButton: {
+  sidebarLogo: {
     width: 36,
     height: 36,
+    borderRadius: 12,
+    backgroundColor: '#5B4DFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sidebarBrandText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  sidebarBrandSub: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  sidebarCloseButton: {
+    width: 34,
+    height: 34,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   sidebarNavigation: {
     flex: 1,
-    paddingTop: 24,
-    gap: 10,
+    paddingTop: 8,
+    gap: 6,
   },
   sidebarItem: {
-    minHeight: 52,
+    minHeight: 46,
     borderRadius: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
   },
   sidebarItemActive: {
-    backgroundColor: '#505bd4',
+    backgroundColor: '#5B4DFF',
   },
   sidebarIconWrapper: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -627,17 +824,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   sidebarItemText: {
-    color: '#ffffff',
-    fontSize: 15,
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
   },
   sidebarFooter: {
     paddingTop: 8,
   },
+  sidebarTagline: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  sidebarTaglineStrong: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 2,
+    marginBottom: 14,
+  },
   sidebarFooterDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    marginBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 8,
   },
   mobileMenuOverlay: {
     flex: 1,
@@ -647,7 +856,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   mobileMenuCard: {
-    width: 220,
+    width: 240,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingVertical: 8,
@@ -667,9 +876,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   mobileMenuIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -683,88 +892,111 @@ const styles = StyleSheet.create({
     marginHorizontal: 14,
   },
   mobileMenuItemText: {
-    color: '#323a8f',
+    color: '#1B2346',
     fontSize: 15,
     fontWeight: '700',
+    flex: 1,
   },
   mobileMenuLogoutText: {
     color: '#E53935',
     fontSize: 15,
     fontWeight: '700',
   },
+  mobileBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   desktopMain: {
     flex: 1,
     minWidth: 0,
   },
   desktopHeader: {
-    minHeight: 82,
-    backgroundColor: '#323a8f',
+    minHeight: 74,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#2c337d',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  desktopHeaderContent: {
-    width: '100%',
+    borderBottomColor: '#E8ECF4',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
   },
-  menuButton: {
-    width: 46,
-    height: 46,
+  headerSpacer: {
+    width: 8,
+  },
+  reopenButton: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 18,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-  },
-  desktopUserInfo: {
-    flex: 1,
-  },
-  desktopUserName: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  desktopWelcomeText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 14,
-    fontWeight: '500',
+    backgroundColor: '#F4F6FB',
   },
   desktopHeaderActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 14,
+    marginLeft: 'auto',
   },
-  desktopProfileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+  desktopUserName: {
+    color: '#1B2346',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  desktopWelcomeText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  userChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+  },
+  userAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#5B4DFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  userAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
   desktopNotificationButton: {
-    padding: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F4F6FB',
     position: 'relative',
   },
   notificationBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 2,
+    right: 2,
     backgroundColor: '#EF4444',
     borderRadius: 10,
-    minWidth: 18,
-    height: 18,
+    minWidth: 16,
+    height: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
   },
   notificationBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
@@ -776,12 +1008,21 @@ const styles = StyleSheet.create({
   },
   desktopContent: {
     width: '100%',
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    gap: 18,
   },
   hero: {
-    height: 360,
+    height: 250,
+    borderRadius: 24,
     overflow: 'hidden',
-    justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F7F8FF',
+  },
+  heroMobile: {
+    height: 210,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#F7F8FF',
   },
   heroImage: {
     position: 'absolute',
@@ -791,42 +1032,216 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   heroCopy: {
-    width: '40%',
-    minWidth: 300,
-    paddingHorizontal: 42,
-    paddingVertical: 34,
+    width: '58%',
+    minWidth: 280,
+    maxWidth: 560,
+    paddingHorizontal: 32,
+    paddingVertical: 28,
     justifyContent: 'center',
     zIndex: 1,
+    height: '100%',
+  },
+  heroCopyMobile: {
+    width: '78%',
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    justifyContent: 'center',
+    zIndex: 1,
+    height: '100%',
+  },
+  heroKicker: {
+    color: '#5B4DFF',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 8,
   },
   heroTitle: {
-    color: '#323a8f',
-    fontSize: 40,
-    lineHeight: 46,
-    fontWeight: 'bold',
-    maxWidth: 420,
+    color: '#1B2346',
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: '800',
+    maxWidth: 460,
   },
-  heroAccent: {
-    width: 72,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#505bd4',
-    marginTop: 18,
-    marginBottom: 18,
+  heroTitleMobile: {
+    color: '#1B2346',
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '800',
   },
   heroSubtitle: {
-    color: '#283593',
-    fontSize: 17,
-    lineHeight: 26,
+    color: '#475569',
+    fontSize: 14,
+    lineHeight: 21,
     maxWidth: 420,
+    marginTop: 10,
+  },
+  heroButton: {
+    marginTop: 16,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#5B4DFF',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  heroButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   desktopCardsGrid: {
-    gap: 18,
-    marginTop: -24,
-    marginHorizontal: 28,
-    zIndex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
   },
   desktopCardWrapper: {
+    flexGrow: 1,
+    flexBasis: 220,
+    minWidth: 200,
+  },
+  statCard: {
+    borderRadius: 20,
+    padding: 16,
+    minHeight: 176,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: '#1B2346',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  statIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  statTitle: {
+    color: '#1B2346',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  statSubtitle: {
+    color: '#64748B',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  statSubtitleSpacer: {
+    height: 18,
+  },
+  statFooter: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  statAction: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  statArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 6,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#1B2346',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  activityTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  activityTitleIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityTitle: {
+    color: '#1B2346',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  activityViewAll: {
+    color: '#5B4DFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  activityEmpty: {
+    color: '#64748B',
+    fontSize: 14,
+    paddingVertical: 18,
+  },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  activityRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  activityIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityCopy: {
+    flex: 1,
     minWidth: 0,
-    height: 220,
+  },
+  activityItemTitle: {
+    color: '#1B2346',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  activityItemMessage: {
+    color: '#64748B',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  activityTime: {
+    color: '#94A3B8',
+    fontSize: 12,
+    maxWidth: 88,
   },
 });

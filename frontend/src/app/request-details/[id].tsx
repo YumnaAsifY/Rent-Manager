@@ -241,7 +241,7 @@ export default function RequestDetailsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -250,7 +250,7 @@ export default function RequestDetailsScreen() {
   if (!request) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <ScreenHeader title="Request Details" variant="dark" />
         <View style={styles.notFoundContainer}>
           <Ionicons name="alert-circle-outline" size={60} color="#CBD5E1" />
@@ -269,7 +269,7 @@ export default function RequestDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScreenHeader title="Request Details" variant="dark" />
 
@@ -483,7 +483,7 @@ const getStatusBg = (status: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingText: {
     marginTop: 12,
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
   detailRent: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   divider: {
     height: 1,
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   },
   dateItem: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
     borderRadius: 10,
     padding: 10,
     borderWidth: 1,
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   phoneLink: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
     textDecorationLine: 'underline',
   },
   actionContainer: {
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     flex: 1,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
   },
   linkButton: {
     marginTop: 12,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',

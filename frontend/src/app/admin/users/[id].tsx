@@ -157,14 +157,10 @@ export default function AdminUserDetailScreen() {
       >
         <TouchableOpacity
           style={styles.backRow}
-          onPress={() =>
-            router.push(
-              `/admin/users?view=${isManageView ? 'manage' : 'total'}` as any
-            )
-          }
+          onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={20} color="#323a8f" />
+          <Ionicons name="arrow-back" size={20} color="#5B4DFF" />
           <Text style={styles.backText}>Back to Users</Text>
         </TouchableOpacity>
 
@@ -317,7 +313,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   emptyCard: {
     backgroundColor: '#ffffff',
@@ -329,7 +325,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 6,
   },
   emptyText: {
@@ -363,7 +359,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   headerInfo: {
     flex: 1,
@@ -372,7 +368,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   badge: {
     alignSelf: 'flex-start',

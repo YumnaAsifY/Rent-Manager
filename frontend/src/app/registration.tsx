@@ -82,8 +82,9 @@ export default function RegistrationScreen() {
     const hasUpperCase = /[A-Z]/.test(pwd);
     const hasLowerCase = /[a-z]/.test(pwd);
     const hasNumber = /[0-9]/.test(pwd);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
     const hasMinLength = pwd.length >= 8;
-    return hasUpperCase && hasLowerCase && hasNumber && hasMinLength;
+    return hasUpperCase && hasLowerCase && hasNumber && hasSpecial && hasMinLength;
   };
 
   const isGmailAddress = (value: string) => {
@@ -161,7 +162,7 @@ export default function RegistrationScreen() {
       nextErrors.password = 'Required Password';
     } else if (!isPasswordValid(password)) {
       nextErrors.password =
-        'Password must be at least 8 characters with uppercase, lowercase, and number';
+        'Password must be at least 8 characters with uppercase, lowercase, number, and a special character';
     }
 
     if (!confirmPassword) {
@@ -305,7 +306,7 @@ export default function RegistrationScreen() {
               <Text style={styles.validationText}>{fieldErrors.password}</Text>
             ) : password.length > 0 && !isPasswordValid(password) ? (
               <Text style={styles.validationText}>
-                Password must have uppercase, lowercase, and number
+                Password must have uppercase, lowercase, number, and a special character
               </Text>
             ) : null}
           </View>
@@ -388,7 +389,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
     textAlign: 'center',
     marginBottom: 30,
     letterSpacing: 1,
@@ -438,12 +439,12 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     height: 54,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#323a8f',
+    shadowColor: '#5B4DFF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -468,7 +469,7 @@ const styles = StyleSheet.create({
   },
   loginTextBold: {
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   
 });

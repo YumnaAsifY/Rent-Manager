@@ -25,7 +25,7 @@
 //   onPress,
 //   badge,
 //   cardBg = '#ffffff',
-//   iconColor = '#323a8f',
+//   iconColor = '#5B4DFF',
 //   iconBg = '#e3f2fd',
 // }: DashboardCardProps) {
 //   return (
@@ -133,7 +133,7 @@ export default function DashboardCard({
   onPress,
   badge,
   cardBg = '#ffffff',
-  iconColor = '#323a8f',
+  iconColor = '#5B4DFF',
   iconBg = '#e3f2fd',
   desktop = false,
   compact = false,

@@ -74,7 +74,7 @@ export default function ForgotPasswordScreen() {
       
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <EvilIcons name="lock" size={80} color="#323a8f" />  
+          <EvilIcons name="lock" size={80} color="#5B4DFF" />  
         </View>
 
         <Text style={styles.title}>Forgot Password</Text>
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: 1,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     height: 54,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -217,6 +217,6 @@ const styles = StyleSheet.create({
   },
   backToLoginBold: {
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
 });

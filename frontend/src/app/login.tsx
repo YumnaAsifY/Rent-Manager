@@ -92,11 +92,9 @@ export default function LoginScreen() {
     try {
       const loggedInUser = await login(email.trim().toLowerCase(), password);
       setPassword('');
-      showAlert('Successfully logged in', undefined, () => {
-        router.replace(
-          loggedInUser.role === 'admin' ? '/admin' : '/home'
-        );
-      });
+      router.replace(
+        loggedInUser.role === 'admin' ? '/admin' : '/home'
+      );
     } catch (error) {
       if (error instanceof ApiError && error.status === 0) {
         showAlert('Login Failed', error.message);
@@ -303,7 +301,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
     textAlign: 'center',
     marginBottom: 8,
     letterSpacing: 1,
@@ -365,13 +363,13 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: '#323a8f',
+    color: '#5B4DFF',
     fontWeight: '600',
   },
   // LOGIN BUTTON (Same as Registration)
   loginButton: {
     height: 54,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -400,13 +398,13 @@ const styles = StyleSheet.create({
   resendButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
     textAlign: 'center',
   },
   resendNoteText: {
     marginTop: 6,
     fontSize: 13,
-    color: '#323a8f',
+    color: '#5B4DFF',
     textAlign: 'center',
   },
   // REGISTER LINK - Don't have an account?
@@ -422,6 +420,6 @@ const styles = StyleSheet.create({
   },
   registerTextBold: {
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
 });

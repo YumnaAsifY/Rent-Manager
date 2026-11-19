@@ -270,7 +270,7 @@ export default function EditAssetScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading asset...</Text>
       </View>
     );
@@ -279,7 +279,7 @@ export default function EditAssetScreen() {
   if (loadError) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <ScreenHeader title="Edit Asset" variant="dark" />
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>{loadError}</Text>
@@ -293,7 +293,7 @@ export default function EditAssetScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <ScreenHeader title="Edit Asset" variant="dark" />
 
       <ScrollView
@@ -329,7 +329,7 @@ export default function EditAssetScreen() {
             <Text style={[styles.dropdownText, !assetType && { color: '#94A3B8' }]}>
               {assetType || 'Select Type'}
             </Text>
-            <Ionicons name="chevron-down" size={20} color="#323a8f" />
+            <Ionicons name="chevron-down" size={20} color="#5B4DFF" />
           </TouchableOpacity>
           {fieldErrors.type ? (
             <Text style={styles.fieldErrorText}>{fieldErrors.type}</Text>
@@ -508,7 +508,7 @@ export default function EditAssetScreen() {
                     {type}
                   </Text>
                   {assetType === type ? (
-                    <Ionicons name="checkmark" size={20} color="#323a8f" />
+                    <Ionicons name="checkmark" size={20} color="#5B4DFF" />
                   ) : null}
                 </TouchableOpacity>
               ))
@@ -523,13 +523,13 @@ export default function EditAssetScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
     paddingHorizontal: 24,
   },
   loadingText: {
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
   saveButton: {
     height: 44,
     paddingHorizontal: 20,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
   },
   successButton: {
     minWidth: 120,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 28,
@@ -751,7 +751,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   modalItemTextActive: {
-    color: '#323a8f',
+    color: '#5B4DFF',
     fontWeight: '600',
   },
 });

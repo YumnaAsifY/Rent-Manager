@@ -33,6 +33,15 @@ export const adminTabs: AdminTab[] = [
     match: (pathname: string) => pathname.startsWith('/admin/users'),
   },
   {
+    name: 'Profile',
+    icon: 'person',
+    path: '/profile',
+    match: (pathname: string) =>
+      pathname === '/profile' ||
+      pathname.startsWith('/edit-profile') ||
+      pathname.startsWith('/change-password'),
+  },
+  {
     name: 'Asset Category',
     icon: 'layers',
     path: '/admin/asset-categories',

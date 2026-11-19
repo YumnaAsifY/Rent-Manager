@@ -70,7 +70,7 @@ export default function Header({ userName, onMenuPress }: HeaderProps) {
               accessibilityRole="button"
               accessibilityLabel="Open menu"
             >
-              <Ionicons name="menu" size={28} color="#FFFFFF" />
+              <Ionicons name="menu" size={28} color="#1B2346" />
             </TouchableOpacity>
           ) : null}
           <View style={styles.userInfo}>
@@ -82,7 +82,7 @@ export default function Header({ userName, onMenuPress }: HeaderProps) {
             onPress={() => router.push('/notifications' as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="notifications-outline" size={28} color="#FFFFFF" />
+            <Ionicons name="notifications-outline" size={28} color="#1B2346" />
             {unreadCount > 0 ? (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -99,7 +99,9 @@ export default function Header({ userName, onMenuPress }: HeaderProps) {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8ECF4',
     minHeight: Platform.OS === 'web' ? 56 : 64,
     paddingTop: Platform.OS === 'web' ? 10 : 32,
     paddingBottom: Platform.OS === 'web' ? 10 : 4,
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: '#F4F6FB',
   },
   userInfo: {
     flex: 1,
@@ -131,12 +133,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: Platform.OS === 'web' ? 28 : 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#1B2346',
     marginBottom: Platform.OS === 'web' ? 4 : 1,
   },
   welcomeText: {
     fontSize: Platform.OS === 'web' ? 16 : 14,
-    color: 'rgba(255,255,255,0.85)',
+    color: '#64748B',
     fontWeight: '500',
   },
   notificationButton: {

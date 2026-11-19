@@ -120,7 +120,7 @@ export default function ExploreAssetsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading assets...</Text>
       </View>
     );
@@ -128,7 +128,7 @@ export default function ExploreAssetsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScreenHeader title="Explore Assets" variant="dark" />
 
@@ -288,7 +288,7 @@ export default function ExploreAssetsScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="View asset details"
                 >
-                  <Ionicons name="chevron-forward" size={14} color="#323a8f" />
+                  <Ionicons name="chevron-forward" size={14} color="#5B4DFF" />
                 </TouchableOpacity>
               </TouchableOpacity>
             );
@@ -330,7 +330,7 @@ export default function ExploreAssetsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   filterSection: {
     backgroundColor: '#FFFFFF',
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 14,
     paddingLeft: 20,
-    shadowColor: '#323a8f',
+    shadowColor: '#5B4DFF',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 10,
     letterSpacing: 0.2,
   },
@@ -366,8 +366,8 @@ const styles = StyleSheet.create({
     borderColor: '#D6DEFF',
   },
   filterChipActive: {
-    backgroundColor: '#323a8f',
-    borderColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
+    borderColor: '#5B4DFF',
   },
   filterChipText: {
     fontSize: 13,
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   citySearchInput: {
     flex: 1,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingText: {
     marginTop: 12,
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   rentText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 4,
   },
   emptyContainer: {
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,

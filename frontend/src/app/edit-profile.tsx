@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 
 import BottomNavigation from '../components/BottomNavigation';
+import AdminBottomNav from '../components/admin/AdminBottomNav';
 import ScreenHeader from '../components/ScreenHeader';
 import LiftPressable from '../components/LiftPressable';
 
@@ -23,6 +24,7 @@ export default function EditProfileScreen() {
   const router = useRouter();
 
   const { user, token, updateProfile } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phoneNumber || '');
@@ -123,9 +125,13 @@ export default function EditProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      <ScreenHeader title="Edit Profile" variant="dark" />
+      <ScreenHeader
+        title="Edit Profile"
+        variant="dark"
+        fallbackHref={isAdmin ? '/profile' : '/home'}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -209,7 +215,7 @@ export default function EditProfileScreen() {
             disabled={isResending || isSaving}
           >
             {isResending ? (
-              <ActivityIndicator color="#323a8f" />
+              <ActivityIndicator color="#5B4DFF" />
             ) : (
               <Text style={styles.resendButtonText}>Resend verification</Text>
             )}
@@ -219,7 +225,7 @@ export default function EditProfileScreen() {
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      <BottomNavigation />
+      {isAdmin ? <AdminBottomNav /> : <BottomNavigation />}
     </View>
   );
 }
@@ -227,7 +233,7 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -269,12 +275,12 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     height: 54,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#323a8f',
+    shadowColor: '#5B4DFF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -297,12 +303,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#323a8f',
+    borderColor: '#5B4DFF',
   },
   resendButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   bottomSpacing: {
     height: 20,

@@ -7,11 +7,14 @@ import {
   Platform,
   useWindowDimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 
 import AdminShell from '@/components/admin/AdminShell';
+import { subscribeAdminRefresh } from '@/utils/adminRefresh';
+import { readAdminCache, writeAdminCache } from '@/utils/adminScreenCache';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
 import {
@@ -30,31 +33,51 @@ export default function AdminReportsScreen() {
   const { token } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
-  const [reports, setReports] = useState<UserReport[]>([]);
+  const initialReports = readAdminCache<UserReport[]>('admin-reports');
+  const [reports, setReports] = useState<UserReport[]>(initialReports ?? []);
   const [errorMessage, setErrorMessage] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(initialReports === undefined);
 
   const load = useCallback(async () => {
     if (!token) {
       setReports([]);
       setErrorMessage('Authentication required');
+      setLoading(false);
       return;
     }
+
+    const cached = readAdminCache<UserReport[]>('admin-reports');
+    if (cached === undefined) {
+      setLoading(true);
+    } else {
+      setReports(cached);
+      setLoading(false);
+    }
+
     try {
       const data = await fetchAdminReports(token);
+      writeAdminCache('admin-reports', data);
       setReports(data);
       setErrorMessage('');
     } catch (error) {
-      setReports([]);
-      setErrorMessage(
-        error instanceof ApiError ? error.message : 'Unable to load reports.'
-      );
+      if (cached === undefined) {
+        setReports([]);
+        setErrorMessage(
+          error instanceof ApiError ? error.message : 'Unable to load reports.'
+        );
+      }
+    } finally {
+      setLoading(false);
     }
   }, [token]);
 
   useFocusEffect(
     useCallback(() => {
       void load();
+      return subscribeAdminRefresh(() => {
+        void load();
+      });
     }, [load])
   );
 
@@ -111,7 +134,11 @@ export default function AdminReportsScreen() {
         contentContainerStyle={[styles.body, isDesktop && styles.bodyDesktop]}
         showsVerticalScrollIndicator={false}
       >
-        {errorMessage ? (
+        {loading ? (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color="#5B4DFF" />
+          </View>
+        ) : errorMessage ? (
           <Text style={styles.errorText}>{errorMessage}</Text>
         ) : reports.length === 0 ? (
           <Text style={styles.emptyText}>No reports yet.</Text>
@@ -185,6 +212,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   body: { padding: 16, paddingBottom: 28 },
   bodyDesktop: { padding: 28, paddingBottom: 40, maxWidth: 720 },
+  loadingState: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
   errorText: { color: '#C62828', fontSize: 14 },
   emptyText: { color: '#5C6BC0', fontSize: 14 },
   card: {
@@ -195,7 +226,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8EAF6',
   },
-  type: { fontSize: 16, fontWeight: '700', color: '#323a8f' },
+  type: { fontSize: 16, fontWeight: '700', color: '#5B4DFF' },
   meta: { marginTop: 4, fontSize: 13, color: '#5C6BC0' },
   status: { marginTop: 6, fontSize: 12, fontWeight: '600', color: '#64748B' },
   actions: { flexDirection: 'row', gap: 16, marginTop: 12 },

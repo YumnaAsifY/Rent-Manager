@@ -145,7 +145,7 @@ export default function RentalDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading details...</Text>
       </View>
     );
@@ -154,7 +154,7 @@ export default function RentalDetailScreen() {
   if (!rental) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <ScreenHeader title="Rental Detail" variant="dark" />
         <View style={styles.notFoundContainer}>
           <Ionicons name="alert-circle-outline" size={60} color="#CBD5E1" />
@@ -170,7 +170,7 @@ export default function RentalDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScreenHeader title="Rental Detail" variant="dark" />
 
@@ -226,7 +226,7 @@ export default function RentalDetailScreen() {
             <View style={styles.dateRow}>
               <View style={styles.dateItem}>
                 <View style={styles.dateIconRow}>
-                  <Ionicons name="calendar-outline" size={16} color="#323a8f" />
+                  <Ionicons name="calendar-outline" size={16} color="#5B4DFF" />
                   <Text style={styles.dateLabel}>Start Date</Text>
                 </View>
                 <Text style={styles.dateValue}>{rental.startDate || 'N/A'}</Text>
@@ -234,7 +234,7 @@ export default function RentalDetailScreen() {
 
               <View style={styles.dateItem}>
                 <View style={styles.dateIconRow}>
-                  <Ionicons name="calendar-outline" size={16} color="#323a8f" />
+                  <Ionicons name="calendar-outline" size={16} color="#5B4DFF" />
                   <Text style={styles.dateLabel}>End Date</Text>
                 </View>
                 <Text style={styles.dateValue}>{rental.endDate || 'N/A'}</Text>
@@ -329,7 +329,7 @@ const getStatusBg = (status: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingText: {
     marginTop: 12,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   detailRent: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   divider: {
     height: 1,
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   ownerPhone: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
     textDecorationLine: 'underline',
   },
   leaseDatesContainer: {
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
     borderRadius: 10,
     padding: 8,
     borderWidth: 1,
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   payButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     minHeight: 48,
     flexDirection: 'row',

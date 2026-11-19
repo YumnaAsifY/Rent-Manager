@@ -4,14 +4,23 @@ const SEARCH_HEADERS = {
   'Accept-Language': 'en',
 };
 
-async function fetchJson(url) {
-  const response = await fetch(url, { headers: SEARCH_HEADERS });
-  if (!response.ok) {
-    const error = new Error('Geocode request failed');
-    error.status = 502;
-    throw error;
+async function fetchJson(url, timeoutMs = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      headers: SEARCH_HEADERS,
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const error = new Error('Geocode request failed');
+      error.status = 502;
+      throw error;
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timer);
   }
-  return response.json();
 }
 
 function mapNominatimPlace(item) {
@@ -132,19 +141,19 @@ exports.search = async (req, res) => {
 
     for (const variant of queryVariants(query)) {
       try {
-        places = uniquePlaces(places.concat(await searchPhoton(variant)));
+        places = uniquePlaces(places.concat(await searchNominatim(variant)));
       } catch {
-        // Try the next geocoder.
+        // Photon is only used when Nominatim does not answer.
       }
 
-      if (places.length >= 8) {
+      if (places.length > 0) {
         break;
       }
 
       try {
-        places = uniquePlaces(places.concat(await searchNominatim(variant)));
+        places = uniquePlaces(places.concat(await searchPhoton(variant)));
       } catch {
-        // Keep whatever we already found.
+        // Keep going if Photon does not answer.
       }
 
       if (places.length > 0) {

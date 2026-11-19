@@ -37,7 +37,8 @@ const isPasswordValid = (password) => {
     password.length >= 8 &&
     /[A-Z]/.test(password) &&
     /[a-z]/.test(password) &&
-    /[0-9]/.test(password)
+    /[0-9]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
   );
 };
 
@@ -46,7 +47,7 @@ const hashResetToken = (token) => {
 };
 
 const buildVerifyEmailLink = (rawToken) => {
-  const lanIp = process.env.LAN_IP || '10.46.204.228';
+  const lanIp = process.env.LAN_IP || '10.158.135.228';
   const expoPort = process.env.EXPO_PORT || '8081';
   const lanBrowserVerify = `http://${lanIp}:${expoPort}/verify-email`;
   let webVerifyBase = (
@@ -591,7 +592,7 @@ const changePassword = async (req, res) => {
     if (!isPasswordValid(newPassword)) {
       return res.status(400).json({
         message:
-          'New password must be at least 8 characters with uppercase, lowercase, and number',
+          'New password must be at least 8 characters with uppercase, lowercase, number, and a special character',
       });
     }
 
@@ -657,7 +658,7 @@ const forgotPassword = async (req, res) => {
       user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
       await user.save();
 
-      const lanIp = process.env.LAN_IP || '10.81.224.228';
+      const lanIp = process.env.LAN_IP || '10.132.72.228';
       const expoPort = process.env.EXPO_PORT || '8081';
       const lanBrowserReset = `http://${lanIp}:${expoPort}/reset-password`;
       let webResetBase = (
@@ -708,7 +709,7 @@ const resetPassword = async (req, res) => {
     if (!isPasswordValid(newPassword)) {
       return res.status(400).json({
         message:
-          'New password must be at least 8 characters with uppercase, lowercase, and number',
+          'New password must be at least 8 characters with uppercase, lowercase, number, and a special character',
       });
     }
 

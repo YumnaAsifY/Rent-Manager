@@ -25,6 +25,7 @@ const notificationSchema = new mongoose.Schema(
         'payment_sent_to_admin',
         'asset_assigned',
         'tenancy_cancelled',
+        'admin_dispute_email',
       ],
       required: true,
     },

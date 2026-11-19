@@ -14,6 +14,8 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import AdminShell from '@/components/admin/AdminShell';
+import { subscribeAdminRefresh } from '@/utils/adminRefresh';
+import { readAdminCache, writeAdminCache } from '@/utils/adminScreenCache';
 import LiftPressable from '@/components/LiftPressable';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
@@ -40,12 +42,15 @@ export default function AdminPaymentsScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
   const [filter, setFilter] = useState<FilterKey>('all');
-  const [payments, setPayments] = useState<AdminPayment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialPayments = readAdminCache<AdminPayment[]>('admin-payments:all');
+  const [payments, setPayments] = useState<AdminPayment[]>(initialPayments ?? []);
+  const [loading, setLoading] = useState(initialPayments === undefined);
   const [errorMessage, setErrorMessage] = useState('');
   const [settlingId, setSettlingId] = useState<string | null>(null);
 
   const loadPayments = useCallback(async () => {
+    const cacheKey = `admin-payments:${filter}`;
+
     if (!token) {
       setPayments([]);
       setLoading(false);
@@ -53,19 +58,29 @@ export default function AdminPaymentsScreen() {
       return;
     }
 
-    setLoading(true);
+    const cached = readAdminCache<AdminPayment[]>(cacheKey);
+    if (cached === undefined) {
+      setPayments([]);
+      setLoading(true);
+    } else {
+      setPayments(cached);
+      setLoading(false);
+    }
     setErrorMessage('');
 
     try {
       const data = await fetchAdminPayments(token, filter);
+      writeAdminCache(cacheKey, data);
       setPayments(data);
     } catch (error) {
-      setPayments([]);
-      setErrorMessage(
-        error instanceof ApiError
-          ? error.message
-          : 'Unable to load payments. Please try again.'
-      );
+      if (readAdminCache<AdminPayment[]>(cacheKey) === undefined) {
+        setPayments([]);
+        setErrorMessage(
+          error instanceof ApiError
+            ? error.message
+            : 'Unable to load payments. Please try again.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -74,6 +89,9 @@ export default function AdminPaymentsScreen() {
   useFocusEffect(
     useCallback(() => {
       void loadPayments();
+      return subscribeAdminRefresh(() => {
+        void loadPayments();
+      });
     }, [loadPayments])
   );
 
@@ -86,13 +104,15 @@ export default function AdminPaymentsScreen() {
       setSettlingId(payment.id);
       try {
         const updated = await settleAdminPayment(token, payment.id);
-        setPayments((prev) =>
-          prev
+        setPayments((prev) => {
+          const next = prev
             .map((item) => (item.id === updated.id ? updated : item))
             .filter((item) =>
               filter === 'all' ? true : item.status === filter
-            )
-        );
+            );
+          writeAdminCache(`admin-payments:${filter}`, next);
+          return next;
+        });
       } catch (error) {
         const message =
           error instanceof ApiError
@@ -142,7 +162,23 @@ export default function AdminPaymentsScreen() {
                   active && styles.filterChipActive,
                   isDesktop && styles.filterChipDesktop,
                 ]}
-                onPress={() => setFilter(item.key)}
+                onPress={() => {
+                  if (item.key === filter) {
+                    return;
+                  }
+                  const cached = readAdminCache<AdminPayment[]>(
+                    `admin-payments:${item.key}`
+                  );
+                  setFilter(item.key);
+                  setErrorMessage('');
+                  if (cached === undefined) {
+                    setPayments([]);
+                    setLoading(true);
+                  } else {
+                    setPayments(cached);
+                    setLoading(false);
+                  }
+                }}
                 activeOpacity={0.75}
               >
                 <Text
@@ -168,7 +204,7 @@ export default function AdminPaymentsScreen() {
         >
           {loading ? (
             <View style={styles.emptyState}>
-              <ActivityIndicator size="large" color="#323a8f" />
+              <ActivityIndicator size="large" color="#5B4DFF" />
               <Text style={styles.emptyText}>Loading payments...</Text>
             </View>
           ) : errorMessage ? (
@@ -330,7 +366,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   filterChipActive: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
   },
   filterChipText: {
     fontSize: 13,
@@ -366,7 +402,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 17,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   emptyText: {
     marginTop: 6,
@@ -397,7 +433,7 @@ const styles = StyleSheet.create({
   assetName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 4,
   },
   dateText: {
@@ -452,7 +488,7 @@ const styles = StyleSheet.create({
   },
   metaValueStrong: {
     fontSize: 15,
-    color: '#323a8f',
+    color: '#5B4DFF',
     fontWeight: '700',
   },
   metaProfit: {
@@ -462,7 +498,7 @@ const styles = StyleSheet.create({
   },
   settleBtn: {
     marginTop: 16,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     minHeight: 46,
     flexDirection: 'row',

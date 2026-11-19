@@ -10,12 +10,15 @@ import {
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { usePathname, useRouter } from 'expo-router';
-import { ReactNode, useState } from 'react';
+import { useFocusEffect, usePathname, useRouter } from 'expo-router';
+import { ReactNode, useCallback, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
+import { fetchUnreadNotificationsCount } from '@/services/notifications';
 
 import AdminBottomNav from './AdminBottomNav';
+import { openAdminScreen } from '@/utils/adminRefresh';
+
 import { adminTabs } from './adminNav';
 
 type AdminShellProps = {
@@ -32,11 +35,43 @@ export default function AdminShell({
 }: AdminShellProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout, token } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
   const [homeMenuOpen, setHomeMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const isAdminHome = adminTabs[0].match(pathname);
+
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+
+      const loadCount = async () => {
+        if (!token) {
+          if (mounted) {
+            setUnreadCount(0);
+          }
+          return;
+        }
+
+        try {
+          const count = await fetchUnreadNotificationsCount(token);
+          if (mounted) {
+            setUnreadCount(count);
+          }
+        } catch {
+          if (mounted) {
+            setUnreadCount(0);
+          }
+        }
+      };
+
+      void loadCount();
+      return () => {
+        mounted = false;
+      };
+    }, [token])
+  );
 
   const performLogout = async () => {
     try {
@@ -63,6 +98,16 @@ export default function AdminShell({
     ]);
   };
 
+  const openProfile = () => {
+    setHomeMenuOpen(false);
+    openAdminScreen(router, pathname, '/profile');
+  };
+
+  const openNotifications = () => {
+    setHomeMenuOpen(false);
+    openAdminScreen(router, pathname, '/notifications');
+  };
+
   if (isDesktop) {
     return (
       <View style={styles.desktopShell}>
@@ -85,7 +130,7 @@ export default function AdminShell({
                     styles.sidebarItem,
                     isActive && styles.sidebarItemActive,
                   ]}
-                  onPress={() => router.push(tab.path as any)}
+                  onPress={() => openAdminScreen(router, pathname, tab.path)}
                   activeOpacity={0.75}
                 >
                   <Ionicons
@@ -119,6 +164,35 @@ export default function AdminShell({
         <View style={styles.desktopMain}>
           <View style={styles.desktopHeader}>
             <Text style={styles.desktopTitle}>{title}</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.bellButton}
+                onPress={openNotifications}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
+              >
+                <Ionicons
+                  name="notifications-outline"
+                  size={24}
+                  color="#1B2346"
+                />
+                {unreadCount > 0 ? (
+                  <View style={styles.bellBadge}>
+                    <Text style={styles.bellBadgeText}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.profileButton}
+                onPress={openProfile}
+                accessibilityRole="button"
+                accessibilityLabel="Open profile"
+              >
+                <Ionicons name="person" size={20} color="#1B2346" />
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={styles.desktopContent}>{children}</View>
         </View>
@@ -136,11 +210,36 @@ export default function AdminShell({
             accessibilityRole="button"
             accessibilityLabel="Open menu"
           >
-            <Ionicons name="menu" size={26} color="#FFFFFF" />
+            <Ionicons name="menu" size={26} color="#1B2346" />
           </TouchableOpacity>
         ) : (
           <Text style={styles.mobileTitle}>{title}</Text>
         )}
+        <View style={styles.mobileHeaderActions}>
+          <TouchableOpacity
+            style={styles.bellButton}
+            onPress={openNotifications}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
+            <Ionicons name="notifications-outline" size={24} color="#1B2346" />
+            {unreadCount > 0 ? (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.mobileProfileButton}
+            onPress={openProfile}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+          >
+            <Ionicons name="person" size={20} color="#1B2346" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.mobileContent}>{children}</View>
@@ -162,11 +261,11 @@ export default function AdminShell({
               style={styles.menuItem}
               onPress={() => {
                 setHomeMenuOpen(false);
-                router.push('/admin/asset-categories' as any);
+                openAdminScreen(router, pathname, '/admin/asset-categories');
               }}
               activeOpacity={0.75}
             >
-              <Ionicons name="layers-outline" size={20} color="#323a8f" />
+              <Ionicons name="layers-outline" size={20} color="#5B4DFF" />
               <Text style={styles.menuItemText}>Asset Category</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
@@ -194,12 +293,12 @@ const styles = StyleSheet.create({
   desktopShell: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F4F6FB',
     minHeight: Platform.OS === 'web' ? ('100vh' as any) : undefined,
   },
   sidebar: {
     width: 250,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#1B2346',
     paddingHorizontal: 16,
     paddingTop: 22,
     paddingBottom: 24,
@@ -233,7 +332,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   sidebarItemActive: {
-    backgroundColor: '#505BD4',
+    backgroundColor: '#5B4DFF',
   },
   sidebarItemText: {
     color: '#ffffff',
@@ -254,14 +353,54 @@ const styles = StyleSheet.create({
   },
   desktopHeader: {
     minHeight: 72,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#2c337d',
-    justifyContent: 'center',
+    borderBottomColor: '#E8ECF4',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 28,
   },
-  desktopTitle: {
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#E8ECF4',
+    backgroundColor: '#F4F6FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bellButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 0,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#E53935',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: {
     color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  desktopTitle: {
+    color: '#1B2346',
     fontSize: 22,
     fontWeight: '700',
   },
@@ -270,22 +409,38 @@ const styles = StyleSheet.create({
   },
   mobileShell: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F4F6FB',
   },
   mobileHeader: {
     minHeight: 56,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#2c337d',
+    borderBottomColor: '#E8ECF4',
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: Platform.OS === 'ios' ? 8 : 0,
   },
   mobileTitle: {
-    color: '#FFFFFF',
+    color: '#1B2346',
     fontSize: 20,
     fontWeight: '700',
+  },
+  mobileProfileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#E8ECF4',
+    backgroundColor: '#F4F6FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileHeaderActions: {
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   mobileMenuBtn: {
     width: 40,
@@ -322,7 +477,7 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   menuItemDanger: {
     color: '#E53935',

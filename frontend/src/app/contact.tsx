@@ -112,7 +112,7 @@ export default function ContactUsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <ScreenHeader title="Contact Us" variant="dark" />
 
       <ScrollView
@@ -123,7 +123,7 @@ export default function ContactUsScreen() {
         <View style={styles.card}>
           <View style={styles.titleRow}>
             <View style={styles.mailIconWrap}>
-              <Ionicons name="mail-outline" size={22} color="#323a8f" />
+              <Ionicons name="mail-outline" size={22} color="#5B4DFF" />
             </View>
             <View style={styles.titleCopy}>
               <Text style={styles.pageTitle}>Contact Us</Text>
@@ -135,7 +135,7 @@ export default function ContactUsScreen() {
           </View>
 
           <View style={styles.adminBanner}>
-            <Ionicons name="mail-outline" size={18} color="#323a8f" />
+            <Ionicons name="mail-outline" size={18} color="#5B4DFF" />
             <View style={styles.adminBannerCopy}>
               <Text style={styles.adminEmail}>
                 Admin Email: {adminEmail || 'Not configured'}
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 4,
   },
   intro: {
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   adminEmail: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 2,
   },
   adminHint: {
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     minHeight: 46,
     paddingHorizontal: 20,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',

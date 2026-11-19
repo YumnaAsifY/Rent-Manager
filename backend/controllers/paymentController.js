@@ -43,22 +43,44 @@ const normalizePaymentId = (value) => {
   return null;
 };
 
-const serializePayment = (payment) => ({
-  id: payment._id.toString(),
-  status: payment.status,
-  totalAmount: payment.totalAmount,
-  currency: payment.currency,
-  adminProfitPercent: payment.adminProfitPercent,
-  adminProfitAmount: payment.adminProfitAmount,
-  ownerShareAmount: payment.ownerShareAmount,
-  safepayTracker: payment.safepayTracker,
-  safepayEnvironment: payment.safepayEnvironment,
-  rentalId: payment.rental?.toString?.() || String(payment.rental),
-  paidAt: payment.paidAt,
-  settledAt: payment.settledAt,
-  createdAt: payment.createdAt,
-  updatedAt: payment.updatedAt,
-});
+const serializePayment = (payment) => {
+  const tenant =
+    payment.tenant && typeof payment.tenant === 'object' ? payment.tenant : null;
+  const owner =
+    payment.owner && typeof payment.owner === 'object' ? payment.owner : null;
+  const asset =
+    payment.asset && typeof payment.asset === 'object' ? payment.asset : null;
+
+  return {
+    id: payment._id.toString(),
+    status: payment.status,
+    totalAmount: payment.totalAmount,
+    currency: payment.currency,
+    adminProfitPercent: payment.adminProfitPercent,
+    adminProfitAmount: payment.adminProfitAmount,
+    ownerShareAmount: payment.ownerShareAmount,
+    safepayTracker: payment.safepayTracker,
+    safepayEnvironment: payment.safepayEnvironment,
+    rentalId: payment.rental?._id?.toString?.() || payment.rental?.toString?.() || String(payment.rental),
+    paidAt: payment.paidAt,
+    settledAt: payment.settledAt,
+    createdAt: payment.createdAt,
+    updatedAt: payment.updatedAt,
+    tenantName: tenant?.name || null,
+    ownerName: owner?.name || null,
+    assetName: asset?.name || null,
+    assetLocation: asset?.location || null,
+  };
+};
+
+const serializePaymentWithReceipt = async (payment) => {
+  await payment.populate([
+    { path: 'tenant', select: 'name' },
+    { path: 'owner', select: 'name' },
+    { path: 'asset', select: 'name location' },
+  ]);
+  return serializePayment(payment);
+};
 
 const formatAdminDate = (value) => {
   if (!value) {
@@ -130,8 +152,8 @@ const serializeHistoryPayment = (payment, userId) => {
   const asset =
     payment.asset && typeof payment.asset === 'object' ? payment.asset : null;
   const userIdStr = userId.toString();
-  const viewerRole =
-    payment.tenant?.toString?.() === userIdStr ? 'tenant' : 'owner';
+  const tenantId = tenant?._id?.toString?.() || '';
+  const viewerRole = tenantId === userIdStr ? 'tenant' : 'owner';
 
   return {
     id: payment._id.toString(),
@@ -144,6 +166,9 @@ const serializeHistoryPayment = (payment, userId) => {
     adminProfitPercent: payment.adminProfitPercent,
     adminProfitAmount: payment.adminProfitAmount,
     status: payment.status,
+    currency: payment.currency || 'PKR',
+    safepayTracker: payment.safepayTracker || null,
+    safepayEnvironment: payment.safepayEnvironment || null,
     paidAt: payment.paidAt,
     settledAt: payment.settledAt,
     paidDate: formatHistoryDate(payment.paidAt || payment.createdAt),
@@ -363,7 +388,7 @@ const verifyPayment = async (req, res) => {
       return res.status(200).json({
         verified: true,
         safepayState: 'TRACKER_ENDED',
-        payment: serializePayment(payment),
+        payment: await serializePaymentWithReceipt(payment),
       });
     }
 
@@ -418,7 +443,7 @@ const verifyPayment = async (req, res) => {
       return res.status(200).json({
         verified: true,
         safepayState: safepayResult.state,
-        payment: serializePayment(payment),
+        payment: await serializePaymentWithReceipt(payment),
       });
     }
 
@@ -426,7 +451,7 @@ const verifyPayment = async (req, res) => {
     return res.status(200).json({
       verified: false,
       safepayState: safepayResult.state,
-      payment: serializePayment(payment),
+      payment: await serializePaymentWithReceipt(payment),
       message: `Payment is not completed on Safepay yet (status: ${stateLabel}). Wait a moment and retry.`,
     });
   } catch (error) {

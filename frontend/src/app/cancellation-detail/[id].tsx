@@ -70,7 +70,7 @@ export default function CancellationDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading details...</Text>
       </View>
     );
@@ -79,7 +79,7 @@ export default function CancellationDetailScreen() {
   if (!notification) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <ScreenHeader
           title="Cancellation"
           variant="dark"
@@ -103,7 +103,7 @@ export default function CancellationDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScreenHeader
         title="Cancellation"
@@ -150,7 +150,7 @@ export default function CancellationDetailScreen() {
             <Ionicons
               name="information-circle-outline"
               size={18}
-              color="#323a8f"
+              color="#5B4DFF"
             />
             <Text style={styles.adminContactNoteText}>
               Admin may contact you about this matter.
@@ -180,7 +180,7 @@ export default function CancellationDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingText: {
     marginTop: 12,
@@ -303,12 +303,12 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 12,
     lineHeight: 17,
-    color: '#323a8f',
+    color: '#5B4DFF',
     fontWeight: '600',
   },
   linkButton: {
     marginTop: 20,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

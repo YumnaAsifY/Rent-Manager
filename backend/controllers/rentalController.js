@@ -2,17 +2,30 @@ const mongoose = require('mongoose');
 const Rental = require('../models/Rental');
 const { getRentalBillingState, getOwnerRentPaymentStatus } = require('../utils/billingCycle');
 
+// const formatDate = (value) => {
+//   if (!value) {
+//     return null;
+//   }
+
+//   return new Date(value).toLocaleDateString('en-GB', {
+//     day: 'numeric',
+//     month: 'long',
+//     year: 'numeric',
+//   });
+// };cusror 
 const formatDate = (value) => {
   if (!value) {
     return null;
   }
 
   return new Date(value).toLocaleDateString('en-GB', {
+    timeZone: 'Asia/Karachi',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
 };
+
 
 const getLeaseEndBoundary = (leaseEndDate) => {
   const end = new Date(leaseEndDate);
@@ -151,6 +164,7 @@ const getMyRentalsCount = async (req, res) => {
     const count = await Rental.countDocuments({
       tenant: req.userId,
       tenantDeleted: { $ne: true },
+      removedAt: null,
     });
 
     return res.status(200).json({ count });

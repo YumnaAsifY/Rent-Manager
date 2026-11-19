@@ -20,7 +20,10 @@
           "NSAllowsArbitraryLoads": true,
           "NSAllowsLocalNetworking": true
         },
-        "LSApplicationQueriesSchemes": ["maps", "comgooglemaps"]
+        "LSApplicationQueriesSchemes": [
+          "maps",
+          "comgooglemaps"
+        ]
       }
     },
     "android": {
@@ -31,7 +34,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.rentmanager.app"
     },
     "web": {
       "output": "static",
@@ -64,7 +71,11 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "http://10.81.224.228:5000"
+      "apiUrl": "http://10.158.135.228:5000",
+      "router": {},
+      "eas": {
+        "projectId": "a5322296-2bdd-4d41-ad99-ddc0adc23e20"
+      }
     }
   }
 }

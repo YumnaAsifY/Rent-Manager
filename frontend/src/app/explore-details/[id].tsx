@@ -220,8 +220,9 @@ export default function ExploreAssetDetailsScreen() {
     try {
       await createRentalRequest(token, {
         assetId: asset.id,
-        leaseStartDate: start.toISOString(),
-        leaseEndDate: end.toISOString(),
+        leaseStartDate:toInputDateValue(start),
+        leaseEndDate:toInputDateValue(end),
+
       });
 
       resetModal();
@@ -267,7 +268,7 @@ export default function ExploreAssetDetailsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -276,7 +277,7 @@ export default function ExploreAssetDetailsScreen() {
   if (!asset) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <ScreenHeader title="Asset Details" variant="dark" />
         <View style={styles.notFoundContainer}>
           <Ionicons name="alert-circle-outline" size={60} color="#CBD5E1" />
@@ -297,7 +298,7 @@ export default function ExploreAssetDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScreenHeader title="Asset Details" variant="dark" />
 
@@ -453,7 +454,7 @@ export default function ExploreAssetDetailsScreen() {
                       width: '100%',
                     }}
                   />
-                  <Ionicons name="calendar-outline" size={20} color="#323a8f" />
+                  <Ionicons name="calendar-outline" size={20} color="#5B4DFF" />
                 </View>
               ) : (
                 <>
@@ -469,7 +470,7 @@ export default function ExploreAssetDetailsScreen() {
                     >
                       {startDateText || 'Select Start Date'}
                     </Text>
-                    <Ionicons name="calendar-outline" size={20} color="#323a8f" />
+                    <Ionicons name="calendar-outline" size={20} color="#5B4DFF" />
                   </TouchableOpacity>
                   {showStartPicker ? (
                     <DateTimePicker
@@ -510,7 +511,7 @@ export default function ExploreAssetDetailsScreen() {
                       width: '100%',
                     }}
                   />
-                  <Ionicons name="calendar-outline" size={20} color="#323a8f" />
+                  <Ionicons name="calendar-outline" size={20} color="#5B4DFF" />
                 </View>
               ) : (
                 <>
@@ -526,7 +527,7 @@ export default function ExploreAssetDetailsScreen() {
                     >
                       {endDateText || 'Select End Date'}
                     </Text>
-                    <Ionicons name="calendar-outline" size={20} color="#323a8f" />
+                    <Ionicons name="calendar-outline" size={20} color="#5B4DFF" />
                   </TouchableOpacity>
                   {showEndPicker ? (
                     <DateTimePicker
@@ -589,7 +590,7 @@ const getStatusBg = (status: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -603,7 +604,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingText: {
     marginTop: 12,
@@ -669,7 +670,7 @@ const styles = StyleSheet.create({
   detailRent: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   divider: {
     height: 1,
@@ -705,14 +706,14 @@ const styles = StyleSheet.create({
   ownerPhone: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
     textDecorationLine: 'underline',
   },
   buttonContainer: {
     marginTop: 16,
   },
   requestButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -785,7 +786,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   modalInputText: {
     fontSize: 15,
@@ -815,7 +816,7 @@ const styles = StyleSheet.create({
   },
   modalConfirmButton: {
     flex: 1,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',

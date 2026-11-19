@@ -269,7 +269,7 @@ export default function LocationMapModal({
               })}
               {loading ? (
                 <View style={styles.mapStatus}>
-                  <ActivityIndicator color="#323a8f" />
+                  <ActivityIndicator color="#5B4DFF" />
                   <Text style={styles.statusText}>Finding exact location...</Text>
                 </View>
               ) : null}
@@ -283,7 +283,7 @@ export default function LocationMapModal({
             <View style={styles.mapFrame}>
               {loading ? (
                 <View style={styles.mapStatus}>
-                  <ActivityIndicator color="#323a8f" />
+                  <ActivityIndicator color="#5B4DFF" />
                   <Text style={styles.statusText}>Finding exact location...</Text>
                 </View>
               ) : null}
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   openMapsButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,

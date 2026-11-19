@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
@@ -25,6 +26,7 @@ export default function BottomNavigation() {
   const router = useRouter();
   const pathname = usePathname();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -88,8 +90,11 @@ export default function BottomNavigation() {
     return null;
   }
 
+  const bottomInset =
+    Platform.OS === 'android' ? Math.max(insets.bottom, 48) : insets.bottom;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: bottomInset + 8 }]}>
       {navigationTabs.map((tab) => {
         const isActive =
           pathname === tab.path ||
@@ -107,7 +112,7 @@ export default function BottomNavigation() {
               <Ionicons
                 name={isActive ? (tab.icon as any) : (`${tab.icon}-outline` as any)}
                 size={24}
-                color={isActive ? '#323a8f' : '#999999'}
+                color={isActive ? '#5B4DFF' : '#94A3B8'}
               />
               {showBadge && (
                 <View style={styles.badge}>
@@ -132,9 +137,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#ffffff',
     paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 16,
     borderTopWidth: 1,
-    borderTopColor: '#e8eaf6',
+    borderTopColor: '#E8ECF4',
     justifyContent: 'space-around',
   },
   tab: {
@@ -167,11 +171,11 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 10,
-    color: '#999999',
+    color: '#94A3B8',
     marginTop: 4,
   },
   tabLabelActive: {
-    color: '#323a8f',
+    color: '#5B4DFF',
     fontWeight: '600',
   },
 });

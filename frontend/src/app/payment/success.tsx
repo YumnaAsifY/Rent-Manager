@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import {
   verifyPayment,
   type PaymentSessionPayment,
 } from '@/services/payments';
+import { downloadRentReceipt } from '@/utils/paymentReceipt';
 
 /** Safepay redirect can corrupt paymentId — keep first 24-hex ObjectId. */
 function normalizePaymentId(value?: string | string[]) {
@@ -46,6 +48,7 @@ export default function PaymentSuccessScreen() {
   const [verified, setVerified] = useState(false);
   const [message, setMessage] = useState('');
   const [payment, setPayment] = useState<PaymentSessionPayment | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const verifiedRef = useRef(false);
   const lastVerifiedIdRef = useRef<string | null>(null);
 
@@ -78,7 +81,15 @@ export default function PaymentSuccessScreen() {
       }
 
       try {
-        const result = await verifyPayment(token, { paymentId });
+        let result = await verifyPayment(token, { paymentId });
+
+        for (let attempt = 0; attempt < 2 && !result.verified && !cancelled; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          if (cancelled) {
+            return;
+          }
+          result = await verifyPayment(token, { paymentId });
+        }
 
         if (cancelled) {
           return;
@@ -131,7 +142,11 @@ export default function PaymentSuccessScreen() {
     setMessage('');
 
     try {
-      const result = await verifyPayment(token, { paymentId });
+      let result = await verifyPayment(token, { paymentId });
+      for (let attempt = 0; attempt < 2 && !result.verified; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        result = await verifyPayment(token, { paymentId });
+      }
       if (result.verified) {
         verifiedRef.current = true;
         lastVerifiedIdRef.current = paymentId;
@@ -160,13 +175,13 @@ export default function PaymentSuccessScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <ScreenHeader title="Payment" variant="dark" fallbackHref="/payment" />
 
       <View style={styles.body}>
         {loading ? (
           <>
-            <ActivityIndicator size="large" color="#323a8f" />
+            <ActivityIndicator size="large" color="#5B4DFF" />
             <Text style={styles.loadingText}>Confirming with Safepay...</Text>
           </>
         ) : (
@@ -195,6 +210,42 @@ export default function PaymentSuccessScreen() {
                 ) : null}
                 <Text style={styles.meta}>Status: {payment.status}</Text>
               </>
+            ) : null}
+
+            {verified && payment ? (
+              <TouchableOpacity
+                style={[styles.button, styles.secondaryButton]}
+                onPress={() => {
+                  if (downloading) {
+                    return;
+                  }
+                  setDownloading(true);
+                  void downloadRentReceipt({
+                    receiptNumber: payment.id,
+                    paidAt: payment.paidAt,
+                    tenantName: payment.tenantName || 'Tenant',
+                    ownerName: payment.ownerName || 'Owner',
+                    assetName: payment.assetName || 'Asset',
+                    assetLocation: payment.assetLocation,
+                    amount: payment.totalAmount,
+                    currency: payment.currency,
+                    tracker: payment.safepayTracker,
+                    environment: payment.safepayEnvironment,
+                  })
+                    .catch(() => {
+                      Alert.alert(
+                        'Receipt',
+                        'Unable to download the receipt. Please try again.'
+                      );
+                    })
+                    .finally(() => setDownloading(false));
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+                  {downloading ? 'Preparing receipt...' : 'Download receipt'}
+                </Text>
+              </TouchableOpacity>
             ) : null}
 
             {!verified ? (
@@ -249,7 +300,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -268,7 +319,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 16,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 14,
@@ -285,6 +336,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   secondaryButtonText: {
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
 });

@@ -82,7 +82,7 @@
 //               onPress={pickImage}
 //               activeOpacity={0.8}
 //             >
-//               <Ionicons name="camera" size={20} color="#323a8f" />
+//               <Ionicons name="camera" size={20} color="#5B4DFF" />
 //             </TouchableOpacity>
 
 //             <View style={styles.profileInfo}>
@@ -101,7 +101,7 @@
 //           >
 //             <View style={styles.optionLeft}>
 //               <View style={[styles.optionIcon, { backgroundColor: '#EEF4FF' }]}>
-//                 <Ionicons name="create-outline" size={20} color="#323a8f" />
+//                 <Ionicons name="create-outline" size={20} color="#5B4DFF" />
 //               </View>
 //               <Text style={styles.optionText}>Edit Profile</Text>
 //             </View>
@@ -164,7 +164,7 @@
 // const styles = StyleSheet.create({
 //   container: {
 //     flex: 1,
-//     backgroundColor: '#F8FAFC',
+//     backgroundColor: '#F4F6FB',
 //   },
 //   header: {
 //     flexDirection: 'row',
@@ -180,7 +180,7 @@
 //   headerTitle: {
 //     fontSize: 20,
 //     fontWeight: '600',
-//     color: '#323a8f',
+//     color: '#5B4DFF',
 //   },
 //   scrollView: {
 //     flex: 1,
@@ -217,7 +217,7 @@
 //     width: 70,
 //     height: 70,
 //     borderRadius: 35,
-//     backgroundColor: '#323a8f',
+//     backgroundColor: '#5B4DFF',
 //     justifyContent: 'center',
 //     alignItems: 'center',
 //   },
@@ -234,7 +234,7 @@
 //     justifyContent: 'center',
 //     alignItems: 'center',
 //     borderWidth: 1,
-//     borderColor: '#323a8f',
+//     borderColor: '#5B4DFF',
 //     marginLeft: -8,
 //   },
 //   profileInfo: {
@@ -342,63 +342,29 @@
 //     fontSize: 14,
 //   },
 // });
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Alert, Image, Modal, Platform, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Alert, Image, Modal, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import BottomNavigation from '../components/BottomNavigation';
+import AdminBottomNav from '../components/admin/AdminBottomNav';
 import ScreenHeader from '../components/ScreenHeader';
 
-import { PayoutMethod, useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { getAssetImageUrl } from '@/services/assets';
 import { showAlert } from '@/utils/showAlert';
-import LiftPressable from '../components/LiftPressable';
 
 const { width, height } = Dimensions.get('window');
 const isWeb = width > 768;
 
-const PAYOUT_OPTIONS: { key: PayoutMethod; label: string }[] = [
-  { key: 'none', label: 'None' },
-  { key: 'jazzcash', label: 'JazzCash' },
-  { key: 'easypaisa', label: 'EasyPaisa' },
-  { key: 'bank', label: 'Bank' },
-];
-
 export default function ProfileScreen() {
   const router = useRouter();
-  const showPayoutMethod = true;
-  const { user, logout, updateProfile, updateProfileImage } = useAuth();
+  const { user, logout, updateProfileImage } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const profileImage = getAssetImageUrl(user?.profileImage);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>(
-    user?.payoutMethod || 'none'
-  );
-  const [payoutAccountName, setPayoutAccountName] = useState(
-    user?.payoutAccountName || ''
-  );
-  const [payoutNumber, setPayoutNumber] = useState(user?.payoutNumber || '');
-  const [payoutBankName, setPayoutBankName] = useState(
-    user?.payoutBankName || ''
-  );
-  const [isSavingPayout, setIsSavingPayout] = useState(false);
-  const [payoutAccountNameError, setPayoutAccountNameError] = useState('');
-
-  useEffect(() => {
-    setPayoutMethod(user?.payoutMethod || 'none');
-    setPayoutAccountName(user?.payoutAccountName || '');
-    setPayoutNumber(user?.payoutNumber || '');
-    setPayoutBankName(user?.payoutBankName || '');
-  }, [
-    user?.payoutMethod,
-    user?.payoutAccountName,
-    user?.payoutNumber,
-    user?.payoutBankName,
-  ]);
-
-  const isValidAccountHolderName = (value: string) =>
-    /^[A-Za-z][A-Za-z '\u2019-]*$/.test(value.trim());
 
   const performLogout = async () => {
     try {
@@ -461,71 +427,15 @@ export default function ProfileScreen() {
     }
   };
 
-  const validateWalletNumber = (text: string) => {
-    const numericText = text.replace(/[^0-9]/g, '');
-    if (numericText.length <= 11) {
-      setPayoutNumber(numericText);
-    }
-  };
-
-  const handleSavePayout = async () => {
-    if (!user) {
-      return;
-    }
-
-    if (payoutMethod !== 'none') {
-      if (!payoutAccountName.trim()) {
-        setPayoutAccountNameError('Please enter the account holder name.');
-        return;
-      }
-
-      if (!isValidAccountHolderName(payoutAccountName)) {
-        setPayoutAccountNameError(
-          'Use letters, spaces, hyphen and apostrophe only.'
-        );
-        return;
-      }
-
-      if (payoutMethod === 'bank') {
-        if (!payoutBankName.trim()) {
-          showAlert('Error', 'Please enter the bank name.');
-          return;
-        }
-
-        if (payoutNumber.replace(/\s+/g, '').length < 8) {
-          showAlert('Error', 'Enter a valid bank account number or IBAN.');
-          return;
-        }
-      } else if (payoutNumber.length !== 11) {
-        showAlert('Error', 'Wallet number must be exactly 11 digits.');
-        return;
-      }
-    }
-
-    try {
-      setIsSavingPayout(true);
-      await updateProfile(user.name, user.phoneNumber, {
-        payoutMethod,
-        payoutAccountName: payoutAccountName.trim(),
-        payoutNumber: payoutNumber.replace(/\s+/g, ''),
-        payoutBankName: payoutBankName.trim(),
-      });
-      showAlert('Payout details saved');
-    } catch (error: any) {
-      showAlert(
-        'Error',
-        error?.message || 'Unable to save payout details. Please try again.'
-      );
-    } finally {
-      setIsSavingPayout(false);
-    }
-  };
-
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
-      <ScreenHeader title="Profile" variant="dark" />
+      <ScreenHeader
+        title="Profile"
+        variant="dark"
+        fallbackHref={isAdmin ? '/admin' : '/home'}
+      />
 
       <ScrollView 
         style={styles.scrollView}
@@ -568,6 +478,7 @@ export default function ProfileScreen() {
 
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{user?.name || 'User'}</Text>
+              {isAdmin ? <Text style={styles.adminBadge}>Admin</Text> : null}
               <Text style={styles.profileEmail}>{user?.email || ''}</Text>
               {user?.pendingEmail ? (
                 <Text style={styles.profilePending}>
@@ -575,20 +486,6 @@ export default function ProfileScreen() {
                 </Text>
               ) : null}
               <Text style={styles.profilePhone}>{user?.phoneNumber || ''}</Text>
-              {showPayoutMethod ? (
-                user?.payoutMethod && user.payoutMethod !== 'none' ? (
-                  <Text style={styles.profilePhone}>
-                    {user.payoutMethod === 'jazzcash'
-                      ? 'JazzCash'
-                      : user.payoutMethod === 'easypaisa'
-                        ? 'EasyPaisa'
-                        : user.payoutBankName || 'Bank'}
-                    {user.payoutNumber ? ` · ${user.payoutNumber}` : ''}
-                  </Text>
-                ) : (
-                  <Text style={styles.profilePhone}>Payout details not saved</Text>
-                )
-              ) : null}
             </View>
           </View>
         </View>
@@ -601,7 +498,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.optionLeft}>
               <View style={[styles.optionIcon, { backgroundColor: '#EEF4FF' }]}>
-                <Ionicons name="create-outline" size={20} color="#323a8f" />
+                <Ionicons name="create-outline" size={20} color="#5B4DFF" />
               </View>
               <Text style={styles.optionText}>Edit Profile</Text>
             </View>
@@ -622,133 +519,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {showPayoutMethod ? (
-          <View style={styles.payoutCard}>
-            <Text style={styles.payoutTitle}>Owner payout method</Text>
-            <Text style={styles.payoutHint}>
-              Admin uses this to send your rent share (JazzCash, EasyPaisa, or
-              bank). You receive 97% of each rent payment; 3% is the admin
-              commission.
-            </Text>
-            <View style={styles.methodRow}>
-              {PAYOUT_OPTIONS.map((option) => {
-                const active = payoutMethod === option.key;
-                return (
-                  <TouchableOpacity
-                    key={option.key}
-                    style={[
-                      styles.methodChip,
-                      active && styles.methodChipActive,
-                    ]}
-                    onPress={() => setPayoutMethod(option.key)}
-                    disabled={isSavingPayout}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.methodChipText,
-                        active && styles.methodChipTextActive,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {payoutMethod !== 'none' ? (
-              <>
-                <Text style={styles.payoutLabel}>Account holder name</Text>
-                <TextInput
-                  style={styles.payoutInput}
-                  placeholder="Name on JazzCash / bank account"
-                  placeholderTextColor="#94A3B8"
-                  value={payoutAccountName}
-                  onChangeText={(text) => {
-                    setPayoutAccountName(text);
-                    if (!text.trim()) {
-                      setPayoutAccountNameError('');
-                      return;
-                    }
-                    setPayoutAccountNameError(
-                      isValidAccountHolderName(text)
-                        ? ''
-                        : 'Use letters, spaces, hyphen and apostrophe only.'
-                    );
-                  }}
-                  editable={!isSavingPayout}
-                  autoCapitalize="words"
-                />
-                {payoutAccountNameError ? (
-                  <Text style={styles.payoutErrorText}>
-                    {payoutAccountNameError}
-                  </Text>
-                ) : null}
-
-                {payoutMethod === 'bank' ? (
-                  <>
-                    <Text style={styles.payoutLabel}>Bank name</Text>
-                    <TextInput
-                      style={styles.payoutInput}
-                      placeholder="e.g. HBL, Meezan"
-                      placeholderTextColor="#94A3B8"
-                      value={payoutBankName}
-                      onChangeText={setPayoutBankName}
-                      editable={!isSavingPayout}
-                      autoCapitalize="words"
-                    />
-                  </>
-                ) : null}
-
-                <Text style={styles.payoutLabel}>
-                  {payoutMethod === 'bank'
-                    ? 'Account number / IBAN'
-                    : 'Wallet number'}
-                </Text>
-                <TextInput
-                  style={styles.payoutInput}
-                  placeholder={
-                    payoutMethod === 'bank'
-                      ? 'Account number or IBAN'
-                      : '11-digit wallet number'
-                  }
-                  placeholderTextColor="#94A3B8"
-                  keyboardType={
-                    payoutMethod === 'bank' ? 'default' : 'phone-pad'
-                  }
-                  value={payoutNumber}
-                  onChangeText={
-                    payoutMethod === 'bank'
-                      ? setPayoutNumber
-                      : validateWalletNumber
-                  }
-                  maxLength={payoutMethod === 'bank' ? 34 : 11}
-                  editable={!isSavingPayout}
-                  autoCapitalize="characters"
-                />
-              </>
-            ) : null}
-
-            <LiftPressable
-              style={[
-                styles.payoutSaveButton,
-                isSavingPayout && styles.payoutSaveButtonDisabled,
-              ]}
-              onPress={() => void handleSavePayout()}
-              disabled={isSavingPayout}
-            >
-              {isSavingPayout ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.payoutSaveButtonText}>
-                  Save payout method
-                </Text>
-              )}
-            </LiftPressable>
-          </View>
-        ) : null}
-
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
@@ -757,7 +527,7 @@ export default function ProfileScreen() {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <BottomNavigation />
+      {isAdmin ? <AdminBottomNav /> : <BottomNavigation />}
 
       {/* Image Preview Modal */}
       <Modal
@@ -790,7 +560,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -827,7 +597,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -841,7 +611,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -859,6 +629,18 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     marginBottom: 2,
   },
+  adminBadge: {
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#EEF2FF',
+    color: '#5B4DFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   profileEmail: {
     fontSize: 14,
     color: '#64748B',
@@ -866,7 +648,7 @@ const styles = StyleSheet.create({
   },
   profilePending: {
     fontSize: 12,
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 2,
   },
   profilePhone: {
@@ -909,101 +691,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A1A1A',
   },
-  payoutCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  payoutTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  payoutHint: {
-    fontSize: 12,
-    color: '#64748B',
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  methodRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  methodChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#EEF2FF',
-    borderWidth: 1,
-    borderColor: '#C5CAE9',
-  },
-  methodChipActive: {
-    backgroundColor: '#323a8f',
-    borderColor: '#323a8f',
-  },
-  methodChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#3949AB',
-  },
-  methodChipTextActive: {
-    color: '#FFFFFF',
-  },
-  payoutLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  payoutInput: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: '#1A1A1A',
-    backgroundColor: '#FFFFFF',
-    marginBottom: 10,
-  },
-  payoutErrorText: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: -6,
-    marginBottom: 10,
-  },
-  payoutSaveButton: {
-    alignSelf: 'flex-start',
-    height: 40,
-    paddingHorizontal: 16,
-    backgroundColor: '#323a8f',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  payoutSaveButtonDisabled: {
-    opacity: 0.7,
-  },
-  payoutSaveButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   logoutButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#323a8f',
+    shadowColor: '#5B4DFF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

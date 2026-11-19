@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 
 import BottomNavigation from '../components/BottomNavigation';
@@ -36,6 +36,7 @@ const { width } = Dimensions.get('window');
 export default function AddAssetScreen() {
   const router = useRouter();
   const { token } = useAuth();
+  const keepDraftOnLeave = useRef(false);
   const [assetName, setAssetName] = useState(
     () => readAddAssetDraft().assetName
   );
@@ -66,7 +67,6 @@ export default function AddAssetScreen() {
     type?: string;
     location?: string;
     rent?: string;
-    image?: string;
   }>({});
 
   const [assetTypes, setAssetTypes] = useState<string[]>([]);
@@ -92,6 +92,31 @@ export default function AddAssetScreen() {
     imageMimeType,
     imageFileName,
   ]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const keepDraft = keepDraftOnLeave.current;
+      keepDraftOnLeave.current = false;
+
+      if (!keepDraft) {
+        const draft = readAddAssetDraft();
+        setAssetName(draft.assetName);
+        setAssetType(draft.assetType);
+        setLocation(draft.location);
+        setMonthlyRent(draft.monthlyRent);
+        setDescription(draft.description);
+        setImage(draft.image);
+        setImageMimeType(draft.imageMimeType);
+        setImageFileName(draft.imageFileName);
+      }
+
+      return () => {
+        if (!keepDraftOnLeave.current) {
+          clearAddAssetDraft();
+        }
+      };
+    }, [])
+  );
 
   useEffect(() => {
     return subscribeLocationPick((pickedLocation) => {
@@ -159,7 +184,6 @@ export default function AddAssetScreen() {
       setImage(picked.uri);
       setImageMimeType(picked.mimeType ?? null);
       setImageFileName(picked.fileName ?? null);
-      setFieldErrors((prev) => ({ ...prev, image: undefined }));
     }
   };
 
@@ -169,7 +193,6 @@ export default function AddAssetScreen() {
       type?: string;
       location?: string;
       rent?: string;
-      image?: string;
     } = {};
 
     if (!assetName.trim()) {
@@ -193,17 +216,9 @@ export default function AddAssetScreen() {
       nextErrors.rent = 'Enter a valid rent amount';
     }
 
-    if (!image) {
-      nextErrors.image = 'Asset image is required';
-    }
-
     setFieldErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
-      return;
-    }
-
-    if (!image) {
       return;
     }
 
@@ -225,7 +240,7 @@ export default function AddAssetScreen() {
         location,
         description,
         monthlyRent,
-        imageUri: image,
+        imageUri: image || undefined,
         imageMimeType,
         imageFileName,
       });
@@ -245,7 +260,7 @@ export default function AddAssetScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScreenHeader title="Add New Asset" variant="dark" />
 
@@ -281,7 +296,7 @@ export default function AddAssetScreen() {
             <Text style={[styles.dropdownText, !assetType && { color: '#94A3B8' }]}>
               {assetType || 'Select Type'}
             </Text>
-            <Ionicons name="chevron-down" size={20} color="#323a8f" />
+            <Ionicons name="chevron-down" size={20} color="#5B4DFF" />
           </TouchableOpacity>
           {fieldErrors.type ? (
             <Text style={styles.fieldErrorText}>{fieldErrors.type}</Text>
@@ -303,6 +318,7 @@ export default function AddAssetScreen() {
           <LiftPressable
             style={styles.mapButton}
             onPress={() => {
+              keepDraftOnLeave.current = true;
               writeAddAssetDraft({
                 assetName,
                 assetType,
@@ -361,7 +377,7 @@ export default function AddAssetScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Asset Image</Text>
+          <Text style={styles.label}>Asset Image — optional</Text>
           <TouchableOpacity
             style={styles.imageUpload}
             onPress={() => void pickImage()}
@@ -376,15 +392,8 @@ export default function AddAssetScreen() {
               </View>
             )}
           </TouchableOpacity>
-          {fieldErrors.image ? (
-            <Text style={styles.fieldErrorText}>{fieldErrors.image}</Text>
-          ) : null}
         </View>
 
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
-
-      <View style={styles.fabWrapper}>
         <LiftPressable
           style={[styles.saveButton, isSubmitting && styles.buttonDisabled]}
           onPress={() => void handleSaveAsset()}
@@ -396,7 +405,7 @@ export default function AddAssetScreen() {
             <Text style={styles.saveButtonText}>Save Asset</Text>
           )}
         </LiftPressable>
-      </View>
+      </ScrollView>
 
       <BottomNavigation />
 
@@ -461,7 +470,7 @@ export default function AddAssetScreen() {
                   {type}
                 </Text>
                 {assetType === type && (
-                  <Ionicons name="checkmark" size={20} color="#323a8f" />
+                  <Ionicons name="checkmark" size={20} color="#5B4DFF" />
                 )}
               </TouchableOpacity>
               ))
@@ -476,7 +485,7 @@ export default function AddAssetScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -484,7 +493,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 120,
+    paddingBottom: 24,
   },
   inputContainer: {
     marginBottom: 20,
@@ -560,30 +569,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     marginTop: 8,
   },
-  bottomSpacing: {
-    height: 20,
-  },
-  fabWrapper: {
-    position: 'absolute',
-    bottom: 80,
-    left: 20,
-    right: 20,
-  },
   saveButton: {
     width: '100%',
     height: 44,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    boxShadow: '0px 4px 8px rgba(26, 35, 126, 0.3)',
-    elevation: 5,
+    marginTop: 4,
+    marginBottom: 8,
   },
   buttonDisabled: {
     opacity: 0.65,
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   },
   successButton: {
     minWidth: 120,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 28,
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   modalItemTextActive: {
-    color: '#323a8f',
+    color: '#5B4DFF',
     fontWeight: '600',
   },
   modalEmptyText: {

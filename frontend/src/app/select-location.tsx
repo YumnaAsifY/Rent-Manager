@@ -15,7 +15,6 @@ import LiftPressable from '../components/LiftPressable';
 import LeafletWebMap from '../components/LeafletWebMap';
 import { API_BASE_URL } from '@/services/api';
 import { publishLocationPick } from '@/utils/locationPicker';
-import { showAlert } from '@/utils/showAlert';
 
 type LeafletMap = {
   remove: () => void;
@@ -119,7 +118,8 @@ type PlaceResult = {
   display_name?: string;
 };
 
-async function searchPlaces(query: string) {
+
+async function searchBackend(query: string) {
   const response = await fetch(
     `${API_BASE_URL}/api/geocode/search?q=${encodeURIComponent(query)}`
   );
@@ -128,66 +128,20 @@ async function searchPlaces(query: string) {
     result?: PlaceResult | null;
     message?: string;
   };
-
   if (!response.ok) {
     throw new Error(data.message || 'Location search failed');
   }
-
   if (Array.isArray(data.results) && data.results.length > 0) {
     return data.results;
   }
-
   if (data.result) {
     return [data.result];
   }
+  return [];
+}
 
-  // If backend has no match, try Photon directly like Google autocomplete.
-  const photonResponse = await fetch(
-    `https://photon.komoot.io/api/?q=${encodeURIComponent(
-      query
-    )}&limit=10&lang=en&lat=30.3753&lon=69.3451`
-  );
-  const photonData = (await photonResponse.json()) as {
-    features?: Array<{
-      geometry?: { coordinates?: number[] };
-      properties?: {
-        name?: string;
-        street?: string;
-        locality?: string;
-        district?: string;
-        city?: string;
-        county?: string;
-        state?: string;
-        country?: string;
-      };
-    }>;
-  };
-
-  return (photonData.features || [])
-    .map((feature) => {
-      const coords = feature.geometry?.coordinates;
-      const props = feature.properties || {};
-      if (!coords || coords.length < 2) {
-        return null;
-      }
-      const parts = [
-        props.name,
-        props.street,
-        props.locality,
-        props.district,
-        props.city,
-        props.county,
-        props.state,
-        props.country,
-      ].filter(Boolean);
-      return {
-        lat: String(coords[1]),
-        lon: String(coords[0]),
-        name: props.name || '',
-        display_name: [...new Set(parts)].join(', '),
-      };
-    })
-    .filter((place): place is PlaceResult => Boolean(place));
+async function searchPlaces(query: string) {
+  return searchBackend(query);
 }
 
 type MapApi = {
@@ -290,6 +244,7 @@ export default function SelectLocationScreen() {
   const [query, setQuery] = useState(initialQuery);
   const [searching, setSearching] = useState(false);
   const [suggestions, setSuggestions] = useState<PlaceResult[]>([]);
+  const [searchNote, setSearchNote] = useState('');
   const mapApiRef = useRef<MapApi | null>(null);
   const searchRequestRef = useRef(0);
 
@@ -312,16 +267,19 @@ export default function SelectLocationScreen() {
     finishSelection(label);
   };
 
-  const handleSearch = async (rawQuery?: string, alertIfEmpty = false) => {
+  const handleSearch = async (rawQuery?: string) => {
     const text = (rawQuery ?? query).trim();
     if (!text) {
       setSuggestions([]);
+      setSearchNote('Type a place, then press Search.');
       return;
     }
 
     const requestId = searchRequestRef.current + 1;
     searchRequestRef.current = requestId;
     setSearching(true);
+    setSearchNote('');
+    setSuggestions([]);
     try {
       const results = await searchPlaces(text);
       if (requestId !== searchRequestRef.current) {
@@ -329,14 +287,10 @@ export default function SelectLocationScreen() {
       }
       setSuggestions(results);
       if (results.length === 0) {
-        if (alertIfEmpty) {
-          showAlert(
-            'Location not found',
-            'Try the same name Google uses, with city: e.g. Johar Town, Lahore.'
-          );
-        }
+        setSearchNote('No match. Add the city, for example Khalid Road, Sheikhupura.');
         return;
       }
+      setSearchNote('');
       const first = results[0];
       const lat = Number(first.lat);
       const lng = Number(first.lon);
@@ -347,38 +301,22 @@ export default function SelectLocationScreen() {
           first.display_name || first.name || text
         );
       }
-    } catch {
+    } catch (error) {
       if (requestId !== searchRequestRef.current) {
         return;
       }
       setSuggestions([]);
-      if (alertIfEmpty) {
-        showAlert(
-          'Search failed',
-          'Backend must be running on port 5000, then try again.'
-        );
-      }
+      setSearchNote(
+        error instanceof Error
+          ? error.message
+          : 'Search could not reach the server. Keep the backend running, then try again.'
+      );
     } finally {
       if (requestId === searchRequestRef.current) {
         setSearching(false);
       }
     }
   };
-
-  useEffect(() => {
-    const text = query.trim();
-    if (text.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      void handleSearch(text);
-    }, 400);
-
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
 
   return (
     <View style={styles.container}>
@@ -393,11 +331,11 @@ export default function SelectLocationScreen() {
             value={query}
             onChangeText={setQuery}
             returnKeyType="search"
-            onSubmitEditing={() => void handleSearch(undefined, true)}
+            onSubmitEditing={() => void handleSearch()}
           />
           <LiftPressable
             style={styles.searchButton}
-            onPress={() => void handleSearch(undefined, true)}
+            onPress={() => void handleSearch()}
             disabled={searching}
           >
             <Text style={styles.searchButtonText}>
@@ -406,36 +344,37 @@ export default function SelectLocationScreen() {
           </LiftPressable>
         </View>
 
-        {suggestions.length > 0 ? (
-          <View style={styles.suggestionBox}>
-            <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-              {suggestions.map((place, index) => {
-                const label = place.display_name || place.name || '';
-                return (
-                  <TouchableOpacity
-                    key={`${place.lat}-${place.lon}-${index}`}
-                    style={[
-                      styles.suggestionRow,
-                      index === 0 && styles.suggestionRowExact,
-                    ]}
-                    onPress={() => applyPlace(place)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.suggestionTitle} numberOfLines={1}>
-                      {place.name || label.split(',')[0]}
-                      {index === 0 ? '  (closest match)' : ''}
-                    </Text>
-                    <Text style={styles.suggestionSubtitle} numberOfLines={2}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        ) : null}
+        {searchNote ? <Text style={styles.searchNote}>{searchNote}</Text> : null}
       </View>
 
+      {suggestions.length > 0 ? (
+        <ScrollView
+          style={styles.suggestionList}
+          keyboardShouldPersistTaps="handled"
+        >
+          {suggestions.map((place, index) => {
+            const label = place.display_name || place.name || '';
+            return (
+              <TouchableOpacity
+                key={`${place.lat}-${place.lon}-${index}`}
+                style={[
+                  styles.suggestionRow,
+                  index === 0 && styles.suggestionRowExact,
+                ]}
+                onPress={() => applyPlace(place)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.suggestionTitle} numberOfLines={1}>
+                  {place.name || label.split(',')[0]}
+                </Text>
+                <Text style={styles.suggestionSubtitle} numberOfLines={2}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      ) : (
       <View style={styles.mapWrap}>
         {Platform.OS === 'web' ? (
           <WebLeafletMap
@@ -455,6 +394,7 @@ export default function SelectLocationScreen() {
           />
         )}
       </View>
+      )}
     </View>
   );
 }
@@ -466,6 +406,18 @@ const styles = StyleSheet.create({
   },
   searchWrap: {
     zIndex: 20,
+    elevation: 24,
+    backgroundColor: '#FFFFFF',
+  },
+  searchNote: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    color: '#B45309',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  suggestionList: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
   },
   searchRow: {
@@ -521,7 +473,7 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     alignItems: 'center',
     justifyContent: 'center',
   },

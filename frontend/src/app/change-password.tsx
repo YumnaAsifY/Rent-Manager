@@ -30,8 +30,9 @@ export default function ChangePasswordScreen() {
     const hasUpperCase = /[A-Z]/.test(pwd);
     const hasLowerCase = /[a-z]/.test(pwd);
     const hasNumber = /[0-9]/.test(pwd);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
     const hasMinLength = pwd.length >= 8;
-    return hasUpperCase && hasLowerCase && hasNumber && hasMinLength;
+    return hasUpperCase && hasLowerCase && hasNumber && hasSpecial && hasMinLength;
   };
 
   const goToProfile = () => {
@@ -56,7 +57,7 @@ export default function ChangePasswordScreen() {
     if (!isPasswordValid(newPassword)) {
       showAlert(
         'Error',
-        'New password must be at least 8 characters with uppercase, lowercase, and number'
+        'New password must be at least 8 characters with uppercase, lowercase, number, and a special character'
       );
       return;
     }
@@ -204,7 +205,7 @@ export default function ChangePasswordScreen() {
             <Text style={styles.validationText}>{newPasswordError}</Text>
           ) : newPassword.length > 0 && !isPasswordValid(newPassword) ? (
             <Text style={styles.validationText}>
-              Password must have uppercase, lowercase, and number
+              Password must have uppercase, lowercase, number, and a special character
             </Text>
           ) : null}
         </View>
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: 1,
@@ -337,7 +338,7 @@ const styles = StyleSheet.create({
   },
   changeButton: {
     height: 54,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',

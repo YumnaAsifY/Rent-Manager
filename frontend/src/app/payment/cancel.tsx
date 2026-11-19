@@ -14,7 +14,7 @@ export default function PaymentCancelScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <ScreenHeader title="Payment" variant="dark" fallbackHref="/payment" />
 
       <View style={styles.body}>
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 24,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 14,

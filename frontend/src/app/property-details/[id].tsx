@@ -222,8 +222,8 @@ export default function AssetDetailScreen() {
         token,
         assetId,
         email,
-        start.toISOString(),
-        end.toISOString()
+        toInputDateValue(start),
+        toInputDateValue(end)
       );
       setAsset(updated);
       setShowAssignForm(false);
@@ -279,7 +279,7 @@ export default function AssetDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading details...</Text>
       </View>
     );
@@ -288,7 +288,7 @@ export default function AssetDetailScreen() {
   if (!asset) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <ScreenHeader title="Asset Details" variant="dark" />
         <View style={styles.notFoundContainer}>
           <Ionicons name="alert-circle-outline" size={60} color="#CBD5E1" />
@@ -306,7 +306,7 @@ export default function AssetDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScreenHeader title="Asset Details" variant="dark" />
 
@@ -385,7 +385,7 @@ export default function AssetDetailScreen() {
                         <Ionicons
                           name="calendar-outline"
                           size={16}
-                          color="#323a8f"
+                          color="#5B4DFF"
                         />
                         <Text style={styles.dateLabel}>Start Date</Text>
                       </View>
@@ -399,7 +399,7 @@ export default function AssetDetailScreen() {
                         <Ionicons
                           name="calendar-outline"
                           size={16}
-                          color="#323a8f"
+                          color="#5B4DFF"
                         />
                         <Text style={styles.dateLabel}>End Date</Text>
                       </View>
@@ -423,7 +423,7 @@ export default function AssetDetailScreen() {
                 accessibilityLabel="Edit asset"
                 activeOpacity={0.8}
               >
-                <Ionicons name="create-outline" size={22} color="#323a8f" />
+                <Ionicons name="create-outline" size={22} color="#5B4DFF" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionIconButton, styles.deleteIconButton]}
@@ -504,7 +504,7 @@ export default function AssetDetailScreen() {
                           width: '100%',
                         }}
                       />
-                      <Ionicons name="calendar-outline" size={18} color="#323a8f" />
+                      <Ionicons name="calendar-outline" size={18} color="#5B4DFF" />
                     </View>
                   ) : (
                     <>
@@ -520,7 +520,7 @@ export default function AssetDetailScreen() {
                         >
                           {startDateText || 'Select Start Date'}
                         </Text>
-                        <Ionicons name="calendar-outline" size={18} color="#323a8f" />
+                        <Ionicons name="calendar-outline" size={18} color="#5B4DFF" />
                       </TouchableOpacity>
                       {showStartPicker ? (
                         <DateTimePicker
@@ -564,7 +564,7 @@ export default function AssetDetailScreen() {
                           width: '100%',
                         }}
                       />
-                      <Ionicons name="calendar-outline" size={18} color="#323a8f" />
+                      <Ionicons name="calendar-outline" size={18} color="#5B4DFF" />
                     </View>
                   ) : (
                     <>
@@ -580,7 +580,7 @@ export default function AssetDetailScreen() {
                         >
                           {endDateText || 'Select End Date'}
                         </Text>
-                        <Ionicons name="calendar-outline" size={18} color="#323a8f" />
+                        <Ionicons name="calendar-outline" size={18} color="#5B4DFF" />
                       </TouchableOpacity>
                       {showEndPicker ? (
                         <DateTimePicker
@@ -650,7 +650,7 @@ export default function AssetDetailScreen() {
                   <Ionicons
                     name="information-circle-outline"
                     size={16}
-                    color="#323a8f"
+                    color="#5B4DFF"
                   />
                   <Text style={styles.adminContactNoteText}>
                     Admin is notified of this removal and may contact you about
@@ -745,7 +745,7 @@ const getStatusBg = (status: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -759,7 +759,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingText: {
     marginTop: 12,
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
   },
   assignToggleButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 13,
     color: '#1A1A1A',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
     marginBottom: 0,
   },
   reasonInput: {
@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   modalInputText: {
     fontSize: 13,
@@ -913,12 +913,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     lineHeight: 18,
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   assignSubmitButton: {
     marginTop: 10,
     alignSelf: 'flex-start',
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   },
   successButton: {
     minWidth: 120,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 28,
@@ -1019,7 +1019,7 @@ const styles = StyleSheet.create({
   detailRent: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   divider: {
     height: 1,
@@ -1044,7 +1044,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tenantCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,

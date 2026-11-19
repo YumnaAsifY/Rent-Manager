@@ -44,10 +44,9 @@ export default function MyAssetsScreen() {
   const [isUpdatingId, setIsUpdatingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'Available' | 'Rented'>(
-    'Available'
-  );
-  const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<
+    'All' | 'Available' | 'Rented'
+  >('All');
 
   const loadAssets = useCallback(async () => {
     if (!token) {
@@ -143,19 +142,34 @@ export default function MyAssetsScreen() {
     return '#F3F4F6';
   };
 
-  const filteredAssets = assets.filter(
-    (asset) => asset.status === statusFilter
-  );
+  const filteredAssets =
+    statusFilter === 'All'
+      ? assets
+      : assets.filter((asset) => asset.status === statusFilter);
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      <ScreenHeader title="My Assets" variant="dark" />
+      <ScreenHeader
+        title="My Assets"
+        variant="dark"
+        rightAction={
+          <TouchableOpacity
+            onPress={() => router.push('/add-asset' as any)}
+            style={styles.headerAddButton}
+            accessibilityRole="button"
+            accessibilityLabel="Add asset"
+          >
+            <Ionicons name="add" size={18} color="#5B4DFF" />
+            <Text style={styles.headerAddButtonText}>Add asset</Text>
+          </TouchableOpacity>
+        }
+      />
 
       {isLoading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#323a8f" />
+          <ActivityIndicator size="large" color="#5B4DFF" />
           <Text style={styles.stateText}>Loading assets...</Text>
         </View>
       ) : (
@@ -163,12 +177,6 @@ export default function MyAssetsScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          onLayout={(event) => {
-            const nextHeight = event.nativeEvent.layout.height;
-            if (nextHeight > 0 && nextHeight !== scrollViewportHeight) {
-              setScrollViewportHeight(nextHeight);
-            }
-          }}
         >
           {errorMessage ? (
             <View style={styles.centeredState}>
@@ -178,15 +186,9 @@ export default function MyAssetsScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <View
-              style={
-                filteredAssets.length > 0 && scrollViewportHeight > 0
-                  ? { minHeight: scrollViewportHeight }
-                  : undefined
-              }
-            >
+            <View>
               <View style={styles.filterRow}>
-                {(['Available', 'Rented'] as const).map((status) => {
+                {(['All', 'Available', 'Rented'] as const).map((status) => {
                   const isActive = statusFilter === status;
                   return (
                     <LiftPressable
@@ -219,7 +221,9 @@ export default function MyAssetsScreen() {
                   <Text style={styles.emptyText}>
                     {statusFilter === 'Available'
                       ? 'No available assets.'
-                      : 'No rented assets.'}
+                      : statusFilter === 'Rented'
+                        ? 'No rented assets.'
+                        : 'No assets yet.'}
                   </Text>
                 </View>
               ) : (
@@ -322,7 +326,7 @@ export default function MyAssetsScreen() {
                       <Ionicons
                         name="chevron-forward"
                         size={14}
-                        color="#323a8f"
+                        color="#5B4DFF"
                       />
                     </TouchableOpacity>
                   </TouchableOpacity>
@@ -349,14 +353,6 @@ export default function MyAssetsScreen() {
               )}
             </View>
           )}
-
-          <LiftPressable
-            style={styles.addButton}
-            onPress={() => router.push('/add-asset' as any)}
-          >
-            <Ionicons name="add" size={22} color="#323a8f" />
-            <Text style={styles.addButtonText}>Add asset</Text>
-          </LiftPressable>
         </ScrollView>
       )}
 
@@ -394,7 +390,7 @@ export default function MyAssetsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   scrollView: {
     flex: 1,
@@ -406,7 +402,8 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 24,
+    flexWrap: 'wrap',
+    gap: 12,
     marginBottom: 16,
     paddingTop: 4,
   },
@@ -419,8 +416,8 @@ const styles = StyleSheet.create({
     borderColor: '#D6DEFF',
   },
   filterChipActive: {
-    backgroundColor: '#323a8f',
-    borderColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
+    borderColor: '#5B4DFF',
   },
   filterChipText: {
     fontSize: 13,
@@ -454,7 +451,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
@@ -538,7 +535,7 @@ const styles = StyleSheet.create({
   rentText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
     marginBottom: 4,
   },
   statusRow: {
@@ -569,7 +566,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   makeAvailableButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
@@ -585,23 +582,19 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.65,
   },
-  addButton: {
+  headerAddButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
     backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#323a8f',
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginTop: 8,
-    marginBottom: 12,
-    gap: 8,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
-  addButtonText: {
-    fontSize: 16,
+  headerAddButtonText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   modalOverlay: {
     flex: 1,

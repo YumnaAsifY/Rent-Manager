@@ -20,6 +20,7 @@ import BottomNavigation from '../components/BottomNavigation';
 import ScreenHeader from '../components/ScreenHeader';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/api';
+import { subscribeAdminRefresh } from '@/utils/adminRefresh';
 import {
   AppNotification,
   deleteNotification,
@@ -42,7 +43,8 @@ export default function NotificationsScreen() {
       : tabParam === 'cancellations'
         ? 'cancellations'
         : 'requests';
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -92,6 +94,9 @@ export default function NotificationsScreen() {
       setSelectionMode(false);
       setSelectedIds([]);
       setMenuNotification(null);
+      return subscribeAdminRefresh(() => {
+        void loadNotifications();
+      });
     }, [loadNotifications])
   );
 
@@ -113,8 +118,9 @@ export default function NotificationsScreen() {
   const cancellationNotifications = notifications.filter(
     isCancellationNotification
   );
-  const visibleNotifications =
-    activeTab === 'payments'
+  const visibleNotifications = isAdmin
+    ? notifications
+    : activeTab === 'payments'
       ? paymentNotifications
       : activeTab === 'cancellations'
         ? cancellationNotifications
@@ -193,6 +199,10 @@ export default function NotificationsScreen() {
       } catch {
         // Still allow navigation even if mark-read fails.
       }
+    }
+
+    if (notification.type === 'admin_dispute_email') {
+      return;
     }
 
     if (notification.relatedRequestId) {
@@ -355,7 +365,7 @@ export default function NotificationsScreen() {
             <Ionicons
               name={isSelected ? 'checkbox' : 'square-outline'}
               size={22}
-              color={isSelected ? '#323a8f' : '#94A3B8'}
+              color={isSelected ? '#5B4DFF' : '#94A3B8'}
             />
           </View>
         ) : null}
@@ -393,7 +403,7 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#323a8f" />
+        <ActivityIndicator size="large" color="#5B4DFF" />
         <Text style={styles.loadingText}>Loading notifications...</Text>
       </View>
     );
@@ -437,11 +447,12 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#323a8f" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScreenHeader
         title="Notifications"
         variant="dark"
+        fallbackHref={isAdmin ? '/admin' : '/home'}
         rightAction={headerRight}
       />
 
@@ -464,7 +475,7 @@ export default function NotificationsScreen() {
         </View>
       ) : null}
 
-      {!errorMessage && notifications.length > 0 ? (
+      {!isAdmin && !errorMessage ? (
         <View style={styles.filterSection}>
           <ScrollView
             horizontal
@@ -545,8 +556,8 @@ export default function NotificationsScreen() {
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-off-outline" size={60} color="#CBD5E1" />
             <Text style={styles.emptyText}>
-              {notifications.length === 0
-                ? 'No notifications'
+              {isAdmin
+                ? 'No dispute notifications'
                 : activeTab === 'payments'
                   ? 'No payment notifications'
                   : activeTab === 'cancellations'
@@ -594,7 +605,7 @@ export default function NotificationsScreen() {
         </Pressable>
       </Modal>
 
-      <BottomNavigation />
+      {isAdmin ? null : <BottomNavigation />}
     </View>
   );
 }
@@ -602,13 +613,13 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F6FB',
   },
   loadingText: {
     marginTop: 12,
@@ -651,7 +662,7 @@ const styles = StyleSheet.create({
   selectionCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   deleteSelectedButton: {
     backgroundColor: '#EF4444',
@@ -691,8 +702,8 @@ const styles = StyleSheet.create({
     borderColor: '#D6DEFF',
   },
   filterChipActive: {
-    backgroundColor: '#323a8f',
-    borderColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
+    borderColor: '#5B4DFF',
   },
   chipInner: {
     flexDirection: 'row',
@@ -711,7 +722,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
   },
   chipDotActive: {
     backgroundColor: '#FFFFFF',
@@ -754,11 +765,11 @@ const styles = StyleSheet.create({
   },
   cardUnread: {
     borderLeftWidth: 4,
-    borderLeftColor: '#323a8f',
+    borderLeftColor: '#5B4DFF',
     backgroundColor: '#FAFBFF',
   },
   cardSelected: {
-    borderColor: '#323a8f',
+    borderColor: '#5B4DFF',
     backgroundColor: '#F5F7FF',
   },
   checkboxWrap: {
@@ -781,13 +792,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationTitleUnread: {
-    color: '#323a8f',
+    color: '#5B4DFF',
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     marginLeft: 8,
   },
   menuButton: {
@@ -827,7 +838,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryButton: {
-    backgroundColor: '#323a8f',
+    backgroundColor: '#5B4DFF',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
